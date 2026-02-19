@@ -1,1 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyria Music Editor</title>
+    <style>
+        body { background: #111; color: #0f0; font-family: sans-serif; text-align: center; padding: 10px; }
+        .panel { border: 2px solid #333; padding: 15px; border-radius: 10px; background: #000; }
+        button { width: 45%; margin: 5px; padding: 15px; font-weight: bold; background: #222; color: #0f0; border: 1px solid #0f0; border-radius: 5px; }
+        button:active { background: #0f0; color: #000; }
+        #display { font-size: 1.2em; margin: 20px 0; color: #0ff; height: 30px; }
+        #video-container { width: 100%; height: 200px; background: #222; margin-top: 10px; border: 1px dashed #444; position: relative; }
+        #lyrics-overlay { position: absolute; top: 10px; width: 100%; text-align: center; color: white; font-size: 1.5em; text-shadow: 2px 2px 4px #000; }
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="panel">
+        <h2>LYRIA MUSIC EDITOR</h2>
+        <div id="display">Status: Ready</div>
+        
+        <div id="video-container">
+            <div id="lyrics-overlay">LYRICS LAYER</div>
+            <p style="padding-top: 80px; color: #555;">Video Layer</p>
+        </div>
+
+        <hr style="border: 0.5px solid #333; margin: 20px 0;">
+
+        <button onclick="document.getElementById('audio-input').click()">UPLOAD CLIPS</button>
+        <button onclick="stitchAudio()">STITCH CLIPS</button>
+        
+        <br>
+        
+        <button onclick="playAudio()">PLAY</button>
+        <button onclick="pauseAudio()">PAUSE</button>
+        <button onclick="stopAudio()">STOP</button>
+        <button onclick="nextTrack()">NEXT</button>
+        
+        <br>
+        
+        <button onclick="changeSpeed(1.5)">SPEED +</button>
+        <button onclick="changeSpeed(0.75)">SLOW -</button>
+        <button onclick="record()">REC</button>
+        <button onclick="addLyrics()">ADD LYRICS</button>
+    </div>
+
+    <input type="file" id="audio-input" multiple accept="audio/*">
+    <audio id="player"></audio>
+
+    <script>
+        let player = document.getElementById('player');
+        let display = document.getElementById('display');
+        let tracks = [];
+        let currentTrack = 0;
+
+        document.getElementById('audio-input').onchange = (e) => {
+            tracks = Array.from(e.target.files).map(file => URL.createObjectURL(file));
+            display.innerText = "Loaded: " + tracks.length + " Clips";
+        };
+
+        function playAudio() { if(tracks.length) { player.src = tracks[currentTrack]; player.play(); display.innerText = "Playing..."; } }
+        function pauseAudio() { player.pause(); display.innerText = "Paused"; }
+        function stopAudio() { player.pause(); player.currentTime = 0; display.innerText = "Stopped"; }
+        function nextTrack() { currentTrack = (currentTrack + 1) % tracks.length; playAudio(); }
+        function changeSpeed(s) { player.playbackRate = s; display.innerText = "Speed: " + s + "x"; }
+        
+        function stitchAudio() { 
+            display.innerText = "Stitching Clips... [Simulated]"; 
+            // Logic to merge Blob data would go here
+        }
+
+        function record() { display.innerText = "Recording Active..."; }
+        
+        function addLyrics() {
+            let txt = prompt("Enter Lyric Line:");
+            if(txt) document.getElementById('lyrics-overlay').innerText = txt;
+        }
+    </script>
+</body>
+</html>
 
