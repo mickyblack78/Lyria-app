@@ -3,81 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lyria Music Editor</title>
+    <title>Lyria Engine</title>
     <style>
-        body { background: #111; color: #0f0; font-family: sans-serif; text-align: center; padding: 10px; }
-        .panel { border: 2px solid #333; padding: 15px; border-radius: 10px; background: #000; }
-        button { width: 45%; margin: 5px; padding: 15px; font-weight: bold; background: #222; color: #0f0; border: 1px solid #0f0; border-radius: 5px; }
-        button:active { background: #0f0; color: #000; }
-        #display { font-size: 1.2em; margin: 20px 0; color: #0ff; height: 30px; }
-        #video-container { width: 100%; height: 200px; background: #222; margin-top: 10px; border: 1px dashed #444; position: relative; }
-        #lyrics-overlay { position: absolute; top: 10px; width: 100%; text-align: center; color: white; font-size: 1.5em; text-shadow: 2px 2px 4px #000; }
-        input[type="file"] { display: none; }
+        body { background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 15px; }
+        .box { border: 2px solid #0f0; padding: 15px; background: #111; }
+        #display { background: #222; padding: 15px; margin-bottom: 10px; border: 1px solid #444; }
+        .btn { width: 48%; margin: 4px 1%; padding: 20px; background: #000; color: #0f0; border: 2px solid #0f0; font-weight: bold; }
+        input[type="file"] { background: #222; color: #0f0; width: 100%; padding: 20px; margin: 10px 0; border: 1px dashed #0f0; }
     </style>
 </head>
 <body>
-
-    <div class="panel">
-        <h2>LYRIA MUSIC EDITOR</h2>
-        <div id="display">Status: Ready</div>
-        
-        <div id="video-container">
-            <div id="lyrics-overlay">LYRICS LAYER</div>
-            <p style="padding-top: 80px; color: #555;">Video Layer</p>
-        </div>
-
-        <hr style="border: 0.5px solid #333; margin: 20px 0;">
-
-        <button onclick="document.getElementById('audio-input').click()">UPLOAD CLIPS</button>
-        <button onclick="stitchAudio()">STITCH CLIPS</button>
-        
-        <br>
-        
-        <button onclick="playAudio()">PLAY</button>
-        <button onclick="pauseAudio()">PAUSE</button>
-        <button onclick="stopAudio()">STOP</button>
-        <button onclick="nextTrack()">NEXT</button>
-        
-        <br>
-        
-        <button onclick="changeSpeed(1.5)">SPEED +</button>
-        <button onclick="changeSpeed(0.75)">SLOW -</button>
-        <button onclick="record()">REC</button>
-        <button onclick="addLyrics()">ADD LYRICS</button>
+    <div class="box">
+        <h3>LYRIA CORE ENGINE</h3>
+        <div id="display">READY: SELECT FILES</div>
+        <input type="file" id="f-in" multiple>
+        <button class="btn" onclick="play()">PLAY</button>
+        <button class="btn" onclick="pause()">PAUSE</button>
+        <button class="btn" onclick="next()">NEXT</button>
+        <button class="btn" onclick="stop()">STOP</button>
+        <hr style="border:1px solid #333; margin:15px 0;">
+        <button class="btn" onclick="stitch()">STITCH ALL</button>
+        <button class="btn" id="rec-btn" onclick="toggleRec()">REC</button>
+        <button class="btn" onclick="speed(1.5)">1.5x</button>
+        <button class="btn" onclick="speed(0.8)">0.8x</button>
     </div>
-
-    <input type="file" id="audio-input" multiple accept="audio/*">
-    <audio id="player"></audio>
-
+    <audio id="aud"></audio>
     <script>
-        let player = document.getElementById('player');
-        let display = document.getElementById('display');
-        let tracks = [];
-        let currentTrack = 0;
-
-        document.getElementById('audio-input').onchange = (e) => {
-            tracks = Array.from(e.target.files).map(file => URL.createObjectURL(file));
-            display.innerText = "Loaded: " + tracks.length + " Clips";
+        let a=document.getElementById('aud'), d=document.getElementById('display'), t=[], c=0, r, ch=[];
+        document.getElementById('f-in').onchange=(e)=>{
+            t=Array.from(e.target.files).map(f=>({b:f,u:URL.createObjectURL(f)}));
+            d.innerText=t.length+" LOADED";
         };
-
-        function playAudio() { if(tracks.length) { player.src = tracks[currentTrack]; player.play(); display.innerText = "Playing..."; } }
-        function pauseAudio() { player.pause(); display.innerText = "Paused"; }
-        function stopAudio() { player.pause(); player.currentTime = 0; display.innerText = "Stopped"; }
-        function nextTrack() { currentTrack = (currentTrack + 1) % tracks.length; playAudio(); }
-        function changeSpeed(s) { player.playbackRate = s; display.innerText = "Speed: " + s + "x"; }
-        
-        function stitchAudio() { 
-            display.innerText = "Stitching Clips... [Simulated]"; 
-            // Logic to merge Blob data would go here
+        function play(){if(t[c]){a.src=t[c].u;a.play();d.innerText="TRACK "+(c+1);}}
+        function pause(){a.pause();d.innerText="PAUSED";}
+        function stop(){a.pause();a.currentTime=0;d.innerText="STOPPED";}
+        function next(){c=(c+1)%t.length;play();}
+        function speed(s){a.playbackRate=s;d.innerText="SPEED: "+s+"x";}
+        a.onended=()=>{next();};
+        function stitch(){
+            if(t.length<1)return;
+            let b=new Blob(t.map(i=>i.b),{type:'audio/mpeg'});
+            let l=document.createElement('a');
+            l.href=URL.createObjectURL(b);
+            l.download="lyria_manual_export.mp3";
+            l.click();
+            d.innerText="STITCHED & SAVED";
         }
-
-        function record() { display.innerText = "Recording Active..."; }
-        
-        function addLyrics() {
-            let txt = prompt("Enter Lyric Line:");
-            if(txt) document.getElementById('lyrics-overlay').innerText = txt;
+        async function toggleRec(){
+            if(!r){
+                let s=await navigator.mediaDevices.getUserMedia({audio:true});
+                r=new MediaRecorder(s);
+                r.ondataavailable=(e)=>ch.push(e.data);
+                r.onstop=()=>{
+                    let b=new Blob(ch,{type:'audio/ogg'});
+                    let l=document.createElement('a');
+                    l.href=URL.createObjectURL(b);
+                    l.download="lyria_rec.ogg";
+                    l.click();
+                    ch=[];
+                    d.innerText="REC SAVED";
+                };
+                r.start(); d.innerText="RECORDING...";
+                document.getElementById('rec-btn').style.color="red";
+            }else{
+                r.stop(); r=null;
+                document.getElementById('rec-btn').style.color="#0f0";
+            }
         }
     </script>
 </body>
 </html>
-
