@@ -39,22 +39,27 @@
     #nudge-range { width: 95%; accent-color: #f33; margin-top: 5px; }
 </style>
 <div class="studio">
-    <div id="display">X200 // WAVEFORM ENGINE READY</div>
+    <div id="display">X200 // VIDEO ENGINE INITIALIZED</div>
     <div id="sel-stat">SEL: 0.0s - 0.0s</div>
 
     <div class="timeline-container" id="timeline">
         <div id="sel-bracket" class="bracket" style="left: 0; width: 0; display: none;"></div>
 
         <div class="lane" id="lane1">
-            <canvas id="wave1" style="position:absolute; top:0; left:0; height:100px; width:3000px; opacity:0.6; pointer-events:none;"></canvas>
-            <div id="clip1" class="clip" style="left:0; width:0px; border-bottom: 2px solid #f00;">L1: EMPTY</div>
+            <canvas id="wave1" style="position:absolute; top:0; left:0; height:100px; width:6000px; opacity:0.6; pointer-events:none;"></canvas>
+            <div id="clip1" class="clip" style="left:0; width:0px; border-bottom: 2px solid #f00;">L1: AUDIO</div>
             <input type="range" id="vol1" class="vol-slider" style="left:10px; top:0;" min="0" max="1" step="0.01" value="1">
         </div>
 
         <div class="lane" id="lane2">
-            <canvas id="wave2" style="position:absolute; top:0; left:520px; height:100px; width:3000px; opacity:0.6; pointer-events:none;"></canvas>
-            <div id="clip2" class="clip track2" style="left:520px; width:0px; border-bottom: 2px solid #77f;">L2: EMPTY</div>
+            <canvas id="wave2" style="position:absolute; top:0; left:520px; height:100px; width:6000px; opacity:0.6; pointer-events:none;"></canvas>
+            <div id="clip2" class="clip track2" style="left:520px; width:0px; border-bottom: 2px solid #77f;">L2: STAGGER</div>
             <input type="range" id="vol2" class="vol-slider" style="left:520px; top:80px;" min="0" max="1" step="0.01" value="1">
+        </div>
+
+        <div class="lane" id="lane3" style="background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <video id="v-monitor" style="height: 100%; border: 1px solid #330; background: #000;" muted></video>
+            <div id="clip3" class="clip" style="left:0; width:0px; border-color: #0f0; background: rgba(0,255,0,0.1); opacity: 0.5;">L3: VIDEO SOURCE</div>
         </div>
     </div>
 
@@ -68,19 +73,20 @@
         <button class="btn" onclick="togglePlay()">PLAY</button>
         <button class="btn" onclick="document.getElementById('f2').click()">LOAD L2</button>
         
-        <button class="btn edit-mode" onclick="setSelection()">SET BRACKET</button>
-        <button class="btn edit-mode" onclick="copySection(1)">COPY L1</button>
+        <button class="btn edit-mode" onclick="document.getElementById('f3').click()">LOAD VIDEO</button>
         <button class="btn" onclick="jumpToDrop()">DROP (23s)</button>
+        <button class="btn" onclick="exportMix()">SAVE MIX</button>
 
         <button class="btn" onclick="stopAll()">STOP</button>
         <button class="btn" onclick="undo()">UNDO</button>
-        <button class="btn" onclick="exportMix()">SAVE MIX</button>
+        <button class="btn" onclick="location.reload()">RESET</button>
 
         <input type="file" id="f1" hidden onchange="loadTrack(1, this)">
         <input type="file" id="f2" hidden onchange="loadTrack(2, this)">
+        <input type="file" id="f3" hidden accept="video/*" onchange="loadVideo(this)">
     </div>
-</div>
-
+    </div>
+    
 <script>
     let actx = new (window.AudioContext || window.webkitAudioContext)();
     let clips = { 1: null, 2: null };
