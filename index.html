@@ -3,57 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X200: V4.3 LOCK-TO-X</title>
+    <title>X200: V4.4 DASHBOARD</title>
     <style>
-        body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; }
-        .studio { display: flex; height: 100vh; }
-        #library { width: 160px; background: #0a0000; border-right: 2px solid #300; display: flex; flex-direction: column; padding: 5px; font-size: 10px; overflow-y: auto; }
-        .lib-item { padding: 10px 5px; background: #1a0000; margin: 4px 0; border: 1px solid #444; cursor: pointer; color: #aaa; text-transform: uppercase; }
-        .deck { flex-grow: 1; display: flex; flex-direction: column; }
-        #display { height: 35px; background: #000; text-align: center; line-height: 35px; border-bottom: 1px solid #400; color: #fff; font-size: 12px; }
-        .timeline-container { flex-grow: 1; position: relative; background: #080000; overflow-x: auto; overflow-y: hidden; }
-        .lane { height: 140px; position: relative; width: 10000px; border-bottom: 1px solid #200; background-image: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
-        #gutter { height: 40px; width: 10000px; background: #150000; position: relative; cursor: ew-resize; border-top: 1px solid #444; border-bottom: 1px solid #444; }
-        #playhead { position: absolute; top: -350px; width: 2px; background: #fff; z-index: 999; height: 800px; box-shadow: 0 0 10px #fff; pointer-events: none; }
-        .clip { position: absolute; height: 100px; top: 20px; background: rgba(255, 0, 0, 0.4); border: 1px solid #f00; color: #fff; z-index: 10; font-size: 9px; overflow: hidden; }
-        .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #000; padding: 8px; border-top: 2px solid #f33; }
-        .btn { padding: 15px 2px; background: #1a0000; color: #f33; border: 1px solid #600; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-        .active-lock { background: #440000; border-color: #f00; color: #fff; box-shadow: inset 0 0 10px #f00; }
+        :root { --accent: #ff3333; --bg: #050000; --panel: #0a0000; }
+        body { background: var(--bg); color: var(--accent); font-family: 'Courier New', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* FIXED TOP PANEL */
+        #header { height: 120px; background: var(--panel); border-bottom: 2px solid #300; display: flex; flex-direction: column; z-index: 100; }
+        #display { height: 30px; text-align: center; line-height: 30px; background: #000; font-size: 11px; border-bottom: 1px solid #200; color: #fff; }
+        #lib-scroll { flex-grow: 1; overflow-x: auto; display: flex; padding: 5px; gap: 8px; align-items: center; }
+        .lib-item { min-width: 80px; height: 50px; background: #1a0000; border: 1px solid #444; font-size: 9px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2px; text-transform: uppercase; }
+
+        /* SCROLLABLE CENTER */
+        #studio-main { flex-grow: 1; overflow-x: auto; overflow-y: hidden; position: relative; background: #080000; touch-action: none; }
+        .lane { height: 150px; position: relative; width: 5000px; border-bottom: 1px solid #222; background: linear-gradient(90deg, #111 1px, transparent 1px); background-size: 40px 100%; }
+        #gutter { height: 60px; width: 5000px; background: #150000; position: relative; border-top: 1px solid #444; border-bottom: 1px solid #444; }
+        
+        /* THE NEEDLE & HANDLE */
+        #playhead { position: absolute; top: 0; width: 2px; background: #fff; height: 100%; z-index: 99; pointer-events: none; }
+        #needle-handle { position: absolute; top: 150px; width: 40px; height: 60px; background: rgba(255,255,255,0.2); border-left: 2px solid #fff; margin-left: -20px; z-index: 100; pointer-events: auto; }
+
+        .clip { position: absolute; height: 130px; top: 10px; background: rgba(255, 0, 0, 0.2); border: 1px solid var(--accent); z-index: 10; overflow: hidden; pointer-events: auto; }
+        canvas { width: 100%; height: 100%; pointer-events: none; }
+
+        /* FIXED BOTTOM PANEL */
+        #footer { height: 80px; background: #000; border-top: 2px solid var(--accent); display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 10px; z-index: 100; }
+        .btn { background: #1a0000; color: var(--accent); border: 1px solid #600; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+        .active-lock { background: var(--accent); color: #000; }
     </style>
 </head>
 <body>
-<div class="studio">
-    <div id="library">
-        <strong>GARAGE (1-10)</strong><div id="lib-tracks"></div>
-        <hr style="border:1px solid #300">
-        <strong>MERGED (11-20)</strong><div id="lib-saves"></div>
-    </div>
-    <div class="deck">
-        <div id="display">X200 ENGINE READY // V4.3</div>
-        <div class="timeline-container" id="timeline">
-            <div id="playhead" style="left:0;"></div>
-            <div class="lane" id="lane1"></div>
-            <div id="gutter" ontouchmove="scrub(event)" onclick="scrub(event)"></div>
-            <div class="lane" id="lane2"></div>
-        </div>
-        <div class="controls">
-            <button class="btn" onclick="document.getElementById('f-upload').click()">+ UPLOAD</button>
-            <button class="btn" id="lock-btn" onclick="toggleLock()">LOCK FADE</button>
-            <button class="btn" onclick="slamMerge()" style="color:#ff0">SAVE SLAM</button>
-            <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
-            <button class="btn" onclick="exportFinal()" style="color:#fff">EXPORT</button>
-            <input type="file" id="f-upload" hidden onchange="uploadToLib(event)">
-        </div>
+
+<div id="header">
+    <div id="display">X200 ENGINE // V4.4 READY</div>
+    <div id="lib-scroll">
+        <div id="lib-tracks" style="display:flex; gap:5px;"></div>
+        <div style="border-left:2px solid #300; margin:0 10px; height:40px;"></div>
+        <div id="lib-saves" style="display:flex; gap:5px;"></div>
     </div>
 </div>
+
+<div id="studio-main">
+    <div id="playhead"><div id="needle-handle" ontouchmove="grabNeedle(event)"></div></div>
+    <div class="lane" id="lane1"></div>
+    <div id="gutter" ontouchmove="grabNeedle(event)"></div>
+    <div class="lane" id="lane2"></div>
+</div>
+
+<div id="footer">
+    <button class="btn" onclick="document.getElementById('f-upload').click()">+ FILE</button>
+    <button class="btn" id="lock-btn" onclick="toggleLock()">LOCK</button>
+    <button class="btn" onclick="slamMerge()" style="color:#ff0">SLAM</button>
+    <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
+    <button class="btn" onclick="exportFinal()">WAV</button>
+</div>
+
+<input type="file" id="f-upload" hidden onchange="uploadToLib(event)">
+
 <script>
     const actx = new (window.AudioContext || window.webkitAudioContext)();
-    const pxPerSec = 20;
+    const pxPerSec = 40; // Zoomed in by default
     let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, mergeCount: 0, locked: false };
     let downloads = [], merges = new Array(10).fill(null);
 
     function uploadToLib(e) {
-        const file = e.target.files[0]; if (!file || downloads.length >= 10) return;
+        const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = async (r) => {
             const buffer = await actx.decodeAudioData(r.target.result);
@@ -66,7 +80,7 @@
         const tCont = document.getElementById('lib-tracks'); tCont.innerHTML = '';
         downloads.forEach((t, i) => {
             const div = document.createElement('div'); div.className = 'lib-item';
-            div.innerText = `${i+1}: ${t.name.substring(0,10)}`;
+            div.innerText = t.name.substring(0,8);
             div.onclick = () => inject(t); tCont.appendChild(div);
         });
     }
@@ -81,6 +95,11 @@
         const div = document.createElement('div'); div.className = 'clip';
         div.style.width = (clip.buffer.duration * pxPerSec) + "px";
         div.style.left = (clip.offset * pxPerSec) + "px";
+        
+        const canv = document.createElement('canvas');
+        drawWaveform(clip.buffer, canv);
+        div.appendChild(canv);
+
         let startX = 0;
         div.ontouchstart = (e) => { startX = e.touches[0].clientX - div.offsetLeft; };
         div.ontouchmove = (e) => {
@@ -90,10 +109,28 @@
         lEl.appendChild(div);
     }
 
-    function scrub(e) {
+    function drawWaveform(buffer, canvas) {
+        const ctx = canvas.getContext('2d');
+        const data = buffer.getChannelData(0);
+        const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
+        canvas.width = buffer.duration * pxPerSec; canvas.height = 130;
+        ctx.fillStyle = '#ff3333';
+        for(let i=0; i < canvas.width; i++) {
+            let min=1.0, max=-1.0;
+            for(let j=0; j<step; j++) {
+                let v = data[(i*step)+j];
+                if(v<min) min=v; if(v>max) max=v;
+            }
+            // Normalizing visuals to 90% height
+            ctx.fillRect(i, (1+min)*65, 1, Math.max(1, (max-min)*65));
+        }
+    }
+
+    function grabNeedle(e) {
         e.preventDefault();
-        const rect = document.getElementById('timeline').getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left + document.getElementById('timeline').scrollLeft;
+        const touch = e.touches ? e.touches[0] : e;
+        const studio = document.getElementById('studio-main');
+        const x = touch.clientX + studio.scrollLeft;
         state.currentTime = x / pxPerSec;
         document.getElementById('playhead').style.left = x + "px";
         if (state.playing) { stop(); togglePlay(); }
@@ -102,15 +139,13 @@
     function toggleLock() {
         state.locked = !state.locked;
         document.getElementById('lock-btn').className = state.locked ? 'btn active-lock' : 'btn';
-        document.getElementById('display').innerText = state.locked ? "FADE ARMED AT X" : "MANUAL MODE";
+        document.getElementById('display').innerText = state.locked ? "FADE: ON" : "FADE: OFF";
     }
 
     async function slamMerge() {
         if (!state.bar1 || !state.bar2) return;
-        const duration = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
-        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
-        
-        // Lane 1 Bake
+        const dur = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
+        const offCtx = new OfflineAudioContext(2, 44100 * dur, 44100);
         const s1 = offCtx.createBufferSource(); s1.buffer = state.bar1.buffer;
         const g1 = offCtx.createGain(); s1.connect(g1); g1.connect(offCtx.destination);
         s1.start(state.bar1.offset);
@@ -118,24 +153,19 @@
             g1.gain.setValueAtTime(1, state.bar2.offset);
             g1.gain.linearRampToValueAtTime(0, state.bar2.offset + 2);
         }
-
-        // Lane 2 Bake
         const s2 = offCtx.createBufferSource(); s2.buffer = state.bar2.buffer;
         s2.connect(offCtx.destination); s2.start(state.bar2.offset);
-
-        const mergedBuf = await offCtx.startRendering();
-        state.bar1 = { buffer: mergedBuf, offset: 0 }; state.bar2 = null;
-        const slotIdx = state.mergeCount % 10; merges[slotIdx] = mergedBuf; state.mergeCount++;
-        updateMergeUI(); render(1, state.bar1);
-        document.getElementById('lane2').innerHTML = '';
-        document.getElementById('display').innerText = `SAVED TO SLOT ${slotIdx + 11}`;
+        const res = await offCtx.startRendering();
+        state.bar1 = { buffer: res, offset: 0 }; state.bar2 = null;
+        const idx = state.mergeCount % 10; merges[idx] = res; state.mergeCount++;
+        updateMergeUI(); render(1, state.bar1); document.getElementById('lane2').innerHTML = '';
     }
 
     function updateMergeUI() {
         const mCont = document.getElementById('lib-saves'); mCont.innerHTML = '';
         merges.forEach((m, i) => { if (m) {
             const div = document.createElement('div'); div.className = 'lib-item';
-            div.innerText = `SLOT ${i+11}`;
+            div.innerText = `S-${i+11}`;
             div.onclick = () => { state.bar1 = { buffer: m, offset: 0 }; render(1, state.bar1); };
             mCont.appendChild(div);
         }});
@@ -171,7 +201,7 @@
         if (!state.bar1) return;
         const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "X200_FINAL.wav"; a.click();
+        a.download = "X200_EXPORT.wav"; a.click();
     }
 
     function bufferToWav(abuffer) {
