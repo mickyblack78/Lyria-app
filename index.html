@@ -86,23 +86,9 @@
     let clips = { 1: null, 2: null };
     let sources = { 1: null, 2: null };
     let offsets = { 1: 0, 2: 26.0 };
-    let selection = { start: 0, end: 5 }; // Default 5s selection
+    let selection = { start: 0, end: 5 };
 
     const pxPerSec = 20;
-
-    // Triggered by "SET BRACKET" Button
-    function setSelection() {
-        const bracket = document.getElementById('sel-bracket');
-        const stat = document.getElementById('sel-stat');
-        
-        // Cycle selection: 5s, 10s, or Reset
-        selection.end = (selection.end >= 10) ? 5 : selection.end + 5;
-        
-        bracket.style.display = "block";
-        bracket.style.width = (selection.end * pxPerSec) + "px";
-        stat.innerText = `SEL: 0.0s - ${selection.end}.0s`;
-        document.getElementById('display').innerText = "BRACKET SET: " + selection.end + "s";
-    }
 
     async function loadTrack(lane, input) {
         const file = input.files[0];
@@ -110,9 +96,7 @@
         const arrayBuf = await file.arrayBuffer();
         clips[lane] = await actx.decodeAudioData(arrayBuf);
         renderWaveform(lane, clips[lane]);
-        const block = document.getElementById(`clip${lane}`);
-        block.innerText = file.name;
-        block.style.width = (clips[lane].duration * pxPerSec) + "px";
+        document.getElementById(`clip${lane}`).style.width = (clips[lane].duration * pxPerSec) + "px";
         document.getElementById('display').innerText = "LOADED: L" + lane;
     }
 
@@ -121,7 +105,6 @@
         const ctx = canvas.getContext('2d');
         const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
-        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = lane === 1 ? "#f00" : "#77f";
         for (let i = 0; i < (buffer.duration * pxPerSec); i++) {
@@ -135,26 +118,52 @@
         }
     }
 
-    function togglePlay(startTimeOffset = 0) {
-        stopAll();
-        const now = actx.currentTime;
+    async function exportMix() {
+        if (!clips[1] && !clips[2]) return;
+        document.getElementById('display').innerText = "RENDERING...";
+        const duration = Math.max(
+            clips[1] ? clips[1].duration : 0, 
+            clips[2] ? clips[2].duration + offsets[2] : 0
+        );
+        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
+        
         [1, 2].forEach(lane => {
             if (clips[lane]) {
-                sources[lane] = actx.createBufferSource();
-                sources[lane].buffer = clips[lane];
-                const gain = actx.createGain();
-                gain.gain.value = document.getElementById(`vol${lane}`).value;
-                sources[lane].connect(gain).connect(actx.destination);
-                let delay = offsets[lane] - startTimeOffset;
-                if (delay < 0) sources[lane].start(now, Math.abs(delay));
-                else sources[lane].start(now + delay);
+                const s = offCtx.createBufferSource();
+                s.buffer = clips[lane];
+                const g = offCtx.createGain();
+                g.gain.value = document.getElementById(`vol${lane}`).value;
+                s.connect(g).connect(offCtx.destination);
+                s.start(offsets[lane]);
             }
         });
+
+        const renderedBuffer = await offCtx.startRendering();
+        const blob = new Blob([bufferToWav(renderedBuffer)], {type:'audio/wav'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "RED_RAIN_X200_EXPORT.wav";
+        a.click();
+        document.getElementById('display').innerText = "EXPORT COMPLETE";
     }
 
-    function stopAll() {
-        [1, 2].forEach(l => { if(sources[l]) { try{sources[l].stop()}catch(e){} } });
+    function bufferToWav(abuffer) {
+        let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44, buf = new ArrayBuffer(len), view = new DataView(buf), pos = 0;
+        const set16 = (d) => { view.setInt16(pos, d, true); pos += 2; };
+        const set32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
+        set32(0x46464952); set32(len - 8); set32(0x45564157); set32(0x20746d66); set32(16); set16(1); set16(n); set32(abuffer.sampleRate); set32(abuffer.sampleRate * n * 2); set16(n * 2); set16(16); set32(0x61746164); set32(len - pos - 4);
+        for (let i = 0; i < abuffer.length; i++) {
+            for (let j = 0; j < n; j++) {
+                let s = Math.max(-1, Math.min(1, abuffer.getChannelData(j)[i]));
+                set16(s < 0 ? s * 0x8000 : s * 0x7FFF);
+            }
+        }
+        return buf;
     }
 
-    function jumpToDrop() { togglePlay(23.0); }
-            </script>
+    function togglePlay(s = 0) {
+        stopAll();
+        [1, 2].forEach(l => {
+            if (clips[l]) {
+                sources[l] = actx.createBufferSource();
+                sources[l
