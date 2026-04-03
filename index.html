@@ -2,212 +2,193 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RED RAIN: DUAL-LANE EDITOR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RED RAIN: STAGGERED DAW</title>
     <style>
-        body { background: #0a0000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; padding: 10px; user-select: none; }
-        .studio-box { border: 2px solid #600; background: #110000; padding: 15px; max-width: 800px; margin: auto; box-shadow: 0 0 30px #400; }
-        #display { background: #000; border: 1px solid #900; padding: 10px; margin-bottom: 15px; font-size: 0.9em; min-height: 40px; color: #f00; }
+        /* SECTOR 3: UI & VISUALS (THE SKIN) */
+        body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: manipulation; }
+        .studio { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
         
-        /* The Timeline Lanes */
-        .timeline { position: relative; background: #050000; border: 1px solid #444; height: 160px; margin: 10px 0; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
-        .lane { height: 70px; border-bottom: 1px solid #222; position: relative; width: 2000px; }
-        .clip { position: absolute; height: 60px; background: rgba(150, 0, 0, 0.6); border: 2px solid #f00; top: 5px; color: #fff; font-size: 10px; padding: 5px; box-sizing: border-box; overflow: hidden; }
-        .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 10; pointer-events: none; }
-
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .btn { padding: 15px; background: #200; color: #f33; border: 2px solid #800; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn:active { background: #800; color: #fff; }
-        .nudge-btn { background: #400; width: 48%; }
+        /* The Timeline */
+        .timeline-container { flex-grow: 1; position: relative; background: #110000; border: 2px solid #300; overflow-x: auto; margin-bottom: 10px; }
+        .lane { height: 100px; position: relative; width: 3000px; border-bottom: 1px solid #200; }
         
-        input[type="text"] { background: #000; border: 1px solid #f33; color: #f33; padding: 10px; width: 100%; box-sizing: border-box; margin: 10px 0; }
-        .file-label { display: block; background: #ff3333; color: #000; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        input[type="file"] { display: none; }
+        /* The Clips */
+        .clip { position: absolute; height: 60px; top: 20px; background: rgba(255, 0, 0, 0.2); border: 1px solid #f00; display: flex; align-items: center; justify-content: center; font-size: 10px; pointer-events: none; }
+        .clip.track2 { border-color: #77f; background: rgba(0, 0, 255, 0.1); } /* Blue for Lane 2 trials */
+        
+        /* Sliders Anchored to Tracks */
+        .vol-slider { position: absolute; width: 150px; height: 20px; accent-color: #f00; z-index: 5; }
+        
+        /* Control Panel */
+        .controls { background: #000; border: 1px solid #f33; padding: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+        .btn { padding: 12px; background: #200; color: #f33; border: 1px solid #f33; font-weight: bold; font-size: 10px; }
+        .nudge-panel { grid-column: span 3; background: #1a0000; padding: 10px; border: 1px solid #400; text-align: center; }
+        #nudge-range { width: 90%; accent-color: #f33; }
+        #display { font-size: 12px; height: 20px; text-align: center; color: #fff; }
     </style>
 </head>
 <body>
 
-<div class="studio-box">
-    <h2 style="margin:0 0 10px 0; text-shadow: 0 0 10px #f00;">RED RAIN DAW v1.0</h2>
-    
-    <input type="text" id="proj-name" placeholder="ENTER COMPILATION NAME...">
-    
-    <div id="display">SYSTEM READY // LOAD TRACKS 1 & 2</div>
+<div class="studio">
+    <div id="display">SYSTEM INITIALIZED // LOAD TRACKS</div>
 
-    <div class="timeline" id="tl">
-        <div class="playhead" id="ph"></div>
-        <div class="lane" id="lane1"></div>
-        <div class="lane" id="lane2"></div>
+    <div class="timeline-container" id="tl-cont">
+        <div class="lane" id="lane1">
+            <div id="clip1" class="clip" style="left:0; width:600px;">LANE 1 (EMPTY)</div>
+            <input type="range" id="vol1" class="vol-slider" style="left:450px; top:0;" min="0" max="1" step="0.01" value="1">
+        </div>
+
+        <div class="lane" id="lane2">
+            <div id="clip2" class="clip track2" style="left:520px; width:600px;">LANE 2 (EMPTY)</div>
+            <input type="range" id="vol2" class="vol-slider" style="left:520px; top:80px;" min="0" max="1" step="0.01" value="1">
+        </div>
+    </div>
+
+    <div class="nudge-panel">
+        <label>TRACK 2 START: <span id="offset-val">26.0</span>s</label><br>
+        <input type="range" id="nudge-range" min="20" max="32" step="0.1" value="26">
     </div>
 
     <div class="controls">
-        <div>
-            <label class="file-label">LOAD L1<input type="file" onchange="loadClip(1, this)"></label>
-            <label class="file-label">LOAD L2<input type="file" onchange="loadClip(2, this)"></label>
-        </div>
-        <div>
-            <button class="btn" style="width:100%; height:100%;" onclick="togglePlay()">PLAY / PAUSE</button>
-        </div>
-    </div>
-
-    <div style="margin-top:10px;">
-        <p style="font-size:10px;">NUDGE TRACK 2 OFFSET:</p>
-        <button class="btn nudge-btn" onclick="nudge(-0.5)">- 0.5s</button>
-        <button class="btn nudge-btn" onclick="nudge(0.5)">+ 0.5s</button>
-    </div>
-
-    <div style="margin-top:15px; display: flex; gap: 10px;">
-        <button class="btn" style="flex:1;" onclick="exportMix()">SAVE COMPILATION</button>
-        <button class="btn" style="flex:1; background: #000;" onclick="undo()">UNDO</button>
+        <button class="btn" onclick="document.getElementById('f1').click()">LOAD L1</button>
+        <button class="btn" onclick="togglePlay()">PLAY / JUMP 23s</button>
+        <button class="btn" onclick="exportMix()">SAVE MIX</button>
+        <input type="file" id="f1" hidden onchange="loadTrack(1, this)">
+        <input type="file" id="f2" hidden onchange="loadTrack(2, this)">
+        <button class="btn" onclick="document.getElementById('f2').click()">LOAD L2</button>
+        <button class="btn" onclick="stopAll()">STOP</button>
+        <button class="btn" onclick="undo()">UNDO</button>
     </div>
 </div>
 
 <script>
+    /* SECTOR 1: AUDIO ENGINE */
     let actx = new (window.AudioContext || window.webkitAudioContext)();
     let clips = { 1: null, 2: null };
-    let offsets = { 1: 0, 2: 26.0 }; // Defaulting Track 2 to start at 26s
-    let isPlaying = false;
-    let startTime = 0;
-    let pausedAt = 0;
+    let gains = { 1: actx.createGain(), 2: actx.createGain() };
+    let sources = { 1: null, 2: null };
+    let offsets = { 1: 0, 2: 26.0 };
     let history = [];
 
-    function updateDisplay(msg) { document.getElementById('display').innerText = msg; }
+    /* SECTOR 2: TIMELINE & NUDGE */
+    const nudgeSlider = document.getElementById('nudge-range');
+    const offsetDisplay = document.getElementById('offset-val');
+    const track2Block = document.getElementById('clip2');
+    const vol2Slider = document.getElementById('vol2');
 
-    async function loadClip(lane, input) {
-        if (!input.files[0]) return;
-        saveState(); // For Undo
+    nudgeSlider.oninput = () => {
+        saveState();
+        offsets[2] = parseFloat(nudgeSlider.value);
+        offsetDisplay.innerText = offsets[2].toFixed(1);
+        updateVisuals();
+    };
+
+    function updateVisuals() {
+        const pxPerSec = 20; // Scale: 20 pixels = 1 second
+        track2Block.style.left = (offsets[2] * pxPerSec) + "px";
+        vol2Slider.style.left = (offsets[2] * pxPerSec) + "px";
+    }
+
+    async function loadTrack(lane, input) {
         const file = input.files[0];
+        if (!file) return;
+        document.getElementById('display').innerText = "DECODING " + file.name + "...";
+        
         const arrayBuf = await file.arrayBuffer();
         const audioBuf = await actx.decodeAudioData(arrayBuf);
+        clips[lane] = audioBuf;
         
-        clips[lane] = { buffer: audioBuf, name: file.name };
-        renderTimeline();
-        updateDisplay(`LANE ${lane} LOADED: ${file.name}`);
-    }
-
-    function renderTimeline() {
-        [1, 2].forEach(lane => {
-            const el = document.getElementById(`lane${lane}`);
-            el.innerHTML = '';
-            if (clips[lane]) {
-                const div = document.createElement('div');
-                div.className = 'clip';
-                div.style.left = (offsets[lane] * 20) + 'px'; // 20px per second
-                div.style.width = (clips[lane].buffer.duration * 20) + 'px';
-                div.innerText = clips[lane].name;
-                el.appendChild(div);
-            }
-        });
-    }
-
-    function nudge(val) {
-        saveState();
-        offsets[2] = Math.max(0, offsets[2] + val);
-        updateDisplay(`TRACK 2 OFFSET: ${offsets[2].toFixed(1)}s`);
-        renderTimeline();
-        if(isPlaying) { togglePlay(); togglePlay(); } // Restart to hear change
+        document.getElementById(`clip${lane}`).innerText = file.name;
+        document.getElementById('display').innerText = "LOADED: " + lane;
     }
 
     function togglePlay() {
-        if (isPlaying) {
-            actx.suspend();
-            isPlaying = false;
-        } else {
-            if (actx.state === 'suspended') {
-                actx.resume();
-            } else {
-                playClips();
-            }
-            isPlaying = true;
-            animatePlayhead();
-        }
-    }
+        stopAll();
+        // The "Jump to 23s" Logic:
+        const startTime = actx.currentTime;
+        const jumpTo = 23; 
 
-    function playClips() {
         [1, 2].forEach(lane => {
             if (clips[lane]) {
-                const source = actx.createBufferSource();
-                source.buffer = clips[lane].buffer;
-                source.connect(actx.destination);
-                source.start(actx.currentTime, 0); 
-                // Note: Simplified playback for mobile preview
+                sources[lane] = actx.createBufferSource();
+                sources[lane].buffer = clips[lane];
+                
+                // Route through volume sliders
+                const vol = document.getElementById(`vol${lane}`).value;
+                gains[lane].gain.value = vol;
+                sources[lane].connect(gains[lane]);
+                gains[lane].connect(actx.destination);
+
+                // Calculate when this track should start relative to 23s
+                let startDelay = offsets[lane] - jumpTo;
+                let offsetInFile = jumpTo - offsets[lane];
+
+                if (startDelay < 0) {
+                    // Track already started by 23s, start mid-file
+                    sources[lane].start(startTime, Math.abs(startDelay));
+                } else {
+                    // Track hasn't started yet, schedule it for later
+                    sources[lane].start(startTime + startDelay);
+                }
             }
         });
+        document.getElementById('display').innerText = "PLAYING FROM 23s...";
     }
 
-    function animatePlayhead() {
-        if (!isPlaying) return;
-        let pos = (actx.currentTime % 60) * 20;
-        document.getElementById('ph').style.left = pos + 'px';
-        requestAnimationFrame(animatePlayhead);
+    function stopAll() {
+        [1, 2].forEach(l => { if(sources[l]) { try{sources[l].stop()}catch(e){} } });
+        document.getElementById('display').innerText = "STOPPED";
     }
 
-    function saveState() {
-        history.push(JSON.stringify({ offsets: {...offsets} }));
-        if (history.length > 10) history.shift();
-    }
-
-    function undo() {
-        if (history.length > 0) {
-            const state = JSON.parse(history.pop());
-            offsets = state.offsets;
-            renderTimeline();
-            updateDisplay("UNDO PERFORMED");
-        }
-    }
-
+    /* SECTOR 4: EXPORTER */
     async function exportMix() {
-        const name = document.getElementById('proj-name').value || "RED_RAIN_MIX";
-        updateDisplay("RENDERING FINAL TRACK...");
-        
-        const duration = Math.max(
-            (clips[1] ? clips[1].buffer.duration : 0),
-            (clips[2] ? offsets[2] + clips[2].buffer.duration : 0)
-        );
-
+        document.getElementById('display').innerText = "RENDERING...";
+        const duration = Math.max(30, offsets[2] + 30);
         const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
         
         [1, 2].forEach(lane => {
             if (clips[lane]) {
-                const source = offCtx.createBufferSource();
-                source.buffer = clips[lane].buffer;
-                source.connect(offCtx.destination);
-                source.start(offsets[lane]);
+                const s = offCtx.createBufferSource();
+                s.buffer = clips[lane];
+                const g = offCtx.createGain();
+                g.gain.value = document.getElementById(`vol${lane}`).value;
+                s.connect(g);
+                g.connect(offCtx.destination);
+                s.start(offsets[lane]);
             }
         });
 
-        const rendered = await offCtx.startRendering();
-        const blob = new Blob([bufferToWav(rendered)], { type: 'audio/wav' });
-        const url = URL.createObjectURL(blob);
+        const res = await offCtx.startRendering();
+        const blob = new Blob([bufferToWav(res)], {type:'audio/wav'});
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `${name}.wav`;
+        a.href = URL.createObjectURL(blob);
+        a.download = "X200_STAGGER_MIX.wav";
         a.click();
-        updateDisplay("COMPILATION SAVED.");
+        document.getElementById('display').innerText = "SAVED TO DOWNLOADS";
     }
 
-    // Standard Wav Encoder
+    function saveState() {
+        if(history.length > 20) history.shift();
+        history.push(offsets[2]);
+    }
+
+    function undo() {
+        if(history.length > 0) {
+            offsets[2] = history.pop();
+            nudgeSlider.value = offsets[2];
+            offsetDisplay.innerText = offsets[2].toFixed(1);
+            updateVisuals();
+        }
+    }
+
     function bufferToWav(abuffer) {
-        let numOfChan = abuffer.numberOfChannels,
-            length = abuffer.length * numOfChan * 2 + 44,
-            buffer = new ArrayBuffer(length),
-            view = new DataView(buffer),
-            channels = [], i, sample, offset = 0, pos = 0;
+        let numOfChan = abuffer.numberOfChannels, length = abuffer.length * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], i, sample, offset = 0, pos = 0;
         function setUint32(d) { view.setUint32(pos, d, true); pos += 4; }
         function setUint16(d) { view.setUint16(pos, d, true); pos += 2; }
-        setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
-        setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
-        setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
-        setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+        setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan); setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan); setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
         for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-        while (pos < length) {
-            for (i = 0; i < numOfChan; i++) {
-                sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-                pos += 2;
-            }
-            offset++;
-        }
+        while (pos < length) { for (i = 0; i < numOfChan; i++) { sample = Math.max(-1, Math.min(1, channels[i][offset])); view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true); pos += 2; } offset++; }
         return buffer;
     }
 </script>
