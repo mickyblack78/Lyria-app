@@ -184,10 +184,19 @@
     function sync() {
         if(!state.playing) return;
         let now = (actx.currentTime - state.startTime) + state.currentTime;
-        document.getElementById('playhead').style.left = (now * pxPerSec) + "px";
+        let xPos = now * pxPerSec;
+        
+        // THE CAMERA FOLLOW:
+        document.getElementById('playhead').style.left = xPos + "px";
+        if(xPos > window.innerWidth / 2) {
+            document.getElementById('studio-main').scrollLeft = xPos - (window.innerWidth / 2);
+        }
+
+        // THE AUTO-STOP:
         if(state.bar1 && now >= state.bar1.buffer.duration + state.bar1.offset + 0.1) stop();
         else requestAnimationFrame(sync);
     }
+ 
 
     function reset() { state.bar1 = state.bar2 = null; state.currentTime = 0; document.getElementById('lane1').innerHTML = document.getElementById('lane2').innerHTML = ''; document.getElementById('playhead').style.left = '0px'; document.getElementById('windshield').src = ''; }
     function closeLib() { document.getElementById('lib-overlay').style.display = 'none'; state.selected = null; }
