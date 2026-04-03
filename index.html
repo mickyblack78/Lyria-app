@@ -1,65 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RED RAIN: MASTER EDIT v2.5</title>
-    <style>
-        /* SECTOR 3: UI & VISUALS */
-        body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: manipulation; }
-        .studio { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
-        
-        /* The Timeline */
-        .timeline-container { flex-grow: 1; position: relative; background: #110000; border: 2px solid #300; overflow-x: auto; margin-bottom: 10px; }
-        .lane { height: 100px; position: relative; width: 3000px; border-bottom: 1px solid #200; }
-        
-        /* The Clips */
-        .clip { position: absolute; height: 60px; top: 20px; background: rgba(255, 0, 0, 0.2); border: 1px solid #f00; display: flex; align-items: center; justify-content: center; font-size: 10px; pointer-events: none; }
-        .clip.track2 { border-color: #77f; background: rgba(0, 0, 255, 0.1); } 
-
-        /* Sliders Anchored to Tracks */
-        .vol-slider { position: absolute; width: 150px; height: 20px; accent-color: #f00; z-index: 5; }
-        
-        /* Control Panel */
-        .controls { background: #000; border: 1px solid #f33; padding: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
-        .btn { padding: 10px; background: #200; color: #f33; border: 1px solid #f33; font-weight: bold; font-size: 10px; }
-        .btn.edit-mode { background: #330; border-color: #ff0; color: #ff0; }
-        
-        .nudge-panel { grid-column: span 3; background: #1a0000; padding: 10px; border: 1px solid #400; text-align: center; }
-        #nudge-range { width: 90%; accent-color: #f33; }
-        #display { font-size: 12px; height: 20px; text-align: center; color: #fff; margin-bottom: 5px; }
-    </style>
-</head>
-<body>
-
 <div class="studio">
-    <div id="display">SYSTEM READY // LOAD TRACKS !</div>
+    <div id="display">X200 // WAVEFORM ENGINE READY</div>
+    <div id="sel-stat">SEL: 0.0s - 0.0s</div>
 
-    <div class="timeline-container">
+    <div class="timeline-container" id="timeline">
+        <div id="sel-bracket" class="bracket" style="left: 0; width: 0; display: none;"></div>
+
         <div class="lane" id="lane1">
-            <div id="clip1" class="clip" style="left:0; width:600px;">LANE 1 (EMPTY)</div>
-            <input type="range" id="vol1" class="vol-slider" style="left:450px; top:0;" min="0" max="1" step="0.01" value="1">
+            <canvas id="wave1" style="position:absolute; top:0; left:0; height:100px; width:3000px; opacity:0.6; pointer-events:none;"></canvas>
+            <div id="clip1" class="clip" style="left:0; width:0px; border-bottom: 2px solid #f00;">L1: EMPTY</div>
+            <input type="range" id="vol1" class="vol-slider" style="left:10px; top:0;" min="0" max="1" step="0.01" value="1">
         </div>
 
         <div class="lane" id="lane2">
-            <div id="clip2" class="clip track2" style="left:520px; width:600px;">LANE 2 (EMPTY)</div>
+            <canvas id="wave2" style="position:absolute; top:0; left:520px; height:100px; width:3000px; opacity:0.6; pointer-events:none;"></canvas>
+            <div id="clip2" class="clip track2" style="left:520px; width:0px; border-bottom: 2px solid #77f;">L2: EMPTY</div>
             <input type="range" id="vol2" class="vol-slider" style="left:520px; top:80px;" min="0" max="1" step="0.01" value="1">
         </div>
     </div>
 
     <div class="nudge-panel">
-        <label>TRACK 2 START: <span id="offset-val">26.0</span>s</label><br>
+        <label>T2 OFFSET: <span id="offset-val">26.0</span>s</label><br>
         <input type="range" id="nudge-range" min="20" max="32" step="0.1" value="26">
     </div>
 
     <div class="controls">
         <button class="btn" onclick="document.getElementById('f1').click()">LOAD L1</button>
-        <button class="btn" onclick="togglePlay()">PLAY (23s JUMP)</button>
+        <button class="btn" onclick="togglePlay()">PLAY</button>
         <button class="btn" onclick="document.getElementById('f2').click()">LOAD L2</button>
         
-        <button class="btn edit-mode" onclick="copySection(1)">COPY L1 (5s)</button>
-        <button class="btn edit-mode" onclick="pasteClip(2)">PASTE TO L2</button>
-        <button class="btn" onclick="deleteSection(1)">TRIM L1</button>
+        <button class="btn edit-mode" onclick="setSelection()">SET BRACKET</button>
+        <button class="btn edit-mode" onclick="copySection(1)">COPY L1</button>
+        <button class="btn" onclick="jumpToDrop()">DROP (23s)</button>
 
         <button class="btn" onclick="stopAll()">STOP</button>
         <button class="btn" onclick="undo()">UNDO</button>
@@ -71,77 +42,72 @@
 </div>
 
 <script>
-    /* SECTOR 1 & 2: AUDIO ENGINE & TIMELINE */
     let actx = new (window.AudioContext || window.webkitAudioContext)();
     let clips = { 1: null, 2: null };
-    let gains = { 1: actx.createGain(), 2: actx.createGain() };
     let sources = { 1: null, 2: null };
     let offsets = { 1: 0, 2: 26.0 };
-    let ghostClip = null;
-    let history = [];
+    let selection = { start: 0, end: 5 }; // Default 5s selection
 
-    const nudgeSlider = document.getElementById('nudge-range');
-    const offsetDisplay = document.getElementById('offset-val');
-    const track2Block = document.getElementById('clip2');
-    const vol2Slider = document.getElementById('vol2');
+    const pxPerSec = 20;
 
-    nudgeSlider.oninput = () => {
-        saveState();
-        offsets[2] = parseFloat(nudgeSlider.value);
-        offsetDisplay.innerText = offsets[2].toFixed(1);
-        updateVisuals();
-    };
-
-    function updateVisuals() {
-        const pxPerSec = 20; 
-        track2Block.style.left = (offsets[2] * pxPerSec) + "px";
-        vol2Slider.style.left = (offsets[2] * pxPerSec) + "px";
+    // Triggered by "SET BRACKET" Button
+    function setSelection() {
+        const bracket = document.getElementById('sel-bracket');
+        const stat = document.getElementById('sel-stat');
+        
+        // Cycle selection: 5s, 10s, or Reset
+        selection.end = (selection.end >= 10) ? 5 : selection.end + 5;
+        
+        bracket.style.display = "block";
+        bracket.style.width = (selection.end * pxPerSec) + "px";
+        stat.innerText = `SEL: 0.0s - ${selection.end}.0s`;
+        document.getElementById('display').innerText = "BRACKET SET: " + selection.end + "s";
     }
 
     async function loadTrack(lane, input) {
         const file = input.files[0];
         if (!file) return;
-        document.getElementById('display').innerText = "DECODING " + file.name + "...";
         const arrayBuf = await file.arrayBuffer();
-        const audioBuf = await actx.decodeAudioData(arrayBuf);
-        clips[lane] = audioBuf;
-        document.getElementById(`clip${lane}`).innerText = file.name;
-        document.getElementById('display').innerText = "LOADED: " + lane;
-    }
-
-    function copySection(lane) {
-        if (!clips[lane]) return;
-        ghostClip = { buffer: clips[lane], start: 10, duration: 5 }; // Grab 10s-15s mark
-        document.getElementById('display').innerText = "COPIED 5s FROM MIDDLE!";
-    }
-
-    function pasteClip(targetLane) {
-        if (!ghostClip) return;
-        clips[targetLane] = ghostClip.buffer;
-        document.getElementById('display').innerText = "PASTED TO LANE " + targetLane;
-        updateVisuals();
-    }
-
-    function deleteSection(lane) {
+        clips[lane] = await actx.decodeAudioData(arrayBuf);
+        renderWaveform(lane, clips[lane]);
         const block = document.getElementById(`clip${lane}`);
-        block.style.width = "400px"; // Visually trim
-        document.getElementById('display').innerText = "TRIMMED END";
+        block.innerText = file.name;
+        block.style.width = (clips[lane].duration * pxPerSec) + "px";
+        document.getElementById('display').innerText = "LOADED: L" + lane;
     }
 
-    function togglePlay() {
+    function renderWaveform(lane, buffer) {
+        const canvas = document.getElementById(`wave${lane}`);
+        const ctx = canvas.getContext('2d');
+        const data = buffer.getChannelData(0);
+        const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = lane === 1 ? "#f00" : "#77f";
+        for (let i = 0; i < (buffer.duration * pxPerSec); i++) {
+            let min = 1.0, max = -1.0;
+            for (let j = 0; j < step; j++) {
+                const datum = data[(i * step) + j];
+                if (datum < min) min = datum;
+                if (datum > max) max = datum;
+            }
+            ctx.fillRect(i, (1 + min) * 50, 1, Math.max(1, (max - min) * 50));
+        }
+    }
+
+    function togglePlay(startTimeOffset = 0) {
         stopAll();
-        const startTime = actx.currentTime;
-        const jumpTo = 23; 
+        const now = actx.currentTime;
         [1, 2].forEach(lane => {
             if (clips[lane]) {
                 sources[lane] = actx.createBufferSource();
                 sources[lane].buffer = clips[lane];
-                gains[lane].gain.value = document.getElementById(`vol${lane}`).value;
-                sources[lane].connect(gains[lane]);
-                gains[lane].connect(actx.destination);
-                let startDelay = offsets[lane] - jumpTo;
-                if (startDelay < 0) sources[lane].start(startTime, Math.abs(startDelay));
-                else sources[lane].start(startTime + startDelay);
+                const gain = actx.createGain();
+                gain.gain.value = document.getElementById(`vol${lane}`).value;
+                sources[lane].connect(gain).connect(actx.destination);
+                let delay = offsets[lane] - startTimeOffset;
+                if (delay < 0) sources[lane].start(now, Math.abs(delay));
+                else sources[lane].start(now + delay);
             }
         });
     }
@@ -150,37 +116,5 @@
         [1, 2].forEach(l => { if(sources[l]) { try{sources[l].stop()}catch(e){} } });
     }
 
-    function saveState() { history.push(offsets[2]); if(history.length > 20) history.shift(); }
-    function undo() { if(history.length > 0) { offsets[2] = history.pop(); nudgeSlider.value = offsets[2]; offsetDisplay.innerText = offsets[2].toFixed(1); updateVisuals(); } }
-
-    /* SECTOR 4: EXPORTER */
-    async function exportMix() {
-        document.getElementById('display').innerText = "SAVING...";
-        const offCtx = new OfflineAudioContext(2, 44100 * 60, 44100);
-        [1, 2].forEach(lane => {
-            if (clips[lane]) {
-                const s = offCtx.createBufferSource(); s.buffer = clips[lane];
-                const g = offCtx.createGain(); g.gain.value = document.getElementById(`vol${lane}`).value;
-                s.connect(g); g.connect(offCtx.destination);
-                s.start(offsets[lane]);
-            }
-        });
-        const res = await offCtx.startRendering();
-        const blob = new Blob([bufferToWav(res)], {type:'audio/wav'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "X200_STAGGER_MIX.wav"; a.click();
-        document.getElementById('display').innerText = "SAVED!";
-    }
-
-    function bufferToWav(abuffer) {
-        let numOfChan = abuffer.numberOfChannels, length = abuffer.length * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], i, sample, offset = 0, pos = 0;
-        function setUint32(d) { view.setUint32(pos, d, true); pos += 4; }
-        function setUint16(d) { view.setUint16(pos, d, true); pos += 2; }
-        setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan); setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan); setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
-        for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-        while (pos < length) { for (i = 0; i < numOfChan; i++) { sample = Math.max(-1, Math.min(1, channels[i][offset])); view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true); pos += 2; } offset++; }
-        return buffer;
-    }
-</script>
-</body>
-</html>
+    function jumpToDrop() { togglePlay(23.0); }
+            </script>
