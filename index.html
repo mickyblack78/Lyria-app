@@ -3,202 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RED RAIN: X200 REPLICA v3.0</title><style>
-    /* SECTOR 3: UI & VISUALS - X200 REPLICA V3.1 */
-    body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: manipulation; }
-    .studio { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
-    
-    /* Windshield Display */
-    #display { font-size: 12px; height: 25px; text-align: center; color: #fff; border-bottom: 1px solid #400; text-transform: uppercase; letter-spacing: 2px; }
-    #sel-stat { position: absolute; top: 5px; right: 10px; color: #ff0; font-size: 10px; font-weight: bold; }
+    <title>RED RAIN X200: UNLOCKED</title>
+    <style>
+        body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; }
+        .studio { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
+        
+        /* Display & Needle */
+        #display { font-size: 14px; height: 30px; text-align: center; color: #fff; border-bottom: 1px solid #400; letter-spacing: 1px; }
+        .timeline-container { flex-grow: 1; position: relative; background: #0a0000; border: 2px solid #300; overflow-x: auto; overflow-y: hidden; margin: 10px 0; }
+        #playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 500; pointer-events: none; left: 0; box-shadow: 0 0 10px #fff; }
 
-    /* Timeline & Spotties */
-    .timeline-container { flex-grow: 1; position: relative; background: #0a0000; border: 2px solid #300; overflow-x: auto; margin-bottom: 10px; }
-    .lane { height: 100px; position: relative; width: 3000px; border-bottom: 1px solid #1a0000; background-image: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
-    
-    /* Yellow Selection Brackets (Spotties) */
-    .bracket { 
-        position: absolute; 
-        top: 0; 
-        bottom: 0; 
-        border-left: 2px solid #ff0; 
-        border-right: 2px solid #ff0; 
-        background: rgba(255, 255, 0, 0.08); 
-        pointer-events: none; 
-        z-index: 100;
-        box-shadow: inset 0 0 10px rgba(255, 255, 0, 0.2);
-    }
+        /* Lanes & Clips */
+        .lane { height: 120px; position: relative; width: 10000px; border-bottom: 1px solid #200; background: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
+        .clip { position: absolute; height: 80px; top: 20px; background: rgba(255, 0, 0, 0.2); border: 1px solid #f00; color: #fff; font-size: 10px; padding: 5px; cursor: grab; z-index: 10; overflow: hidden; white-space: nowrap; }
+        .clip.active { border: 2px solid #ff0; box-shadow: 0 0 15px rgba(255,255,0,0.4); }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; height: 100%; width: 100%; }
 
-    /* Tyres (Clips) & Waveforms */
-    canvas { pointer-events: none; image-rendering: pixelated; }
-    .clip { position: absolute; height: 30px; bottom: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid #600; display: flex; align-items: center; padding-left: 5px; font-size: 9px; pointer-events: none; color: #f99; }
-    .clip.track2 { border-color: #449; background: rgba(0, 0, 255, 0.1); } 
+        /* Controls */
+        .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: #000; padding: 5px; border: 1px solid #f33; }
+        .btn { padding: 12px 5px; background: #1a0000; color: #f33; border: 1px solid #500; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+        .btn:active { background: #f33; color: #000; }
+        .vol-box { grid-column: span 2; display: flex; align-items: center; justify-content: space-around; background: #111; border: 1px solid #333; }
+        input[type=range] { accent-color: #f33; width: 70%; }
+    </style>
+</head>
+<body>
 
-    /* Control Hardware */
-    .controls { background: #000; border: 1px solid #f33; padding: 5px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
-    .btn { padding: 12px; background: #1a0000; color: #f33; border: 1px solid #500; font-weight: bold; font-size: 10px; cursor: pointer; }
-    .btn:active { background: #400; }
-    .btn.edit-mode { border-color: #ff0; color: #ff0; }
-    
-    .nudge-panel { grid-column: span 3; background: #0a0000; padding: 8px; border: 1px solid #300; text-align: center; font-size: 10px; }
-    #nudge-range { width: 95%; accent-color: #f33; margin-top: 5px; }
-</style>
 <div class="studio">
-    <div id="display">X200 // VIDEO ENGINE INITIALIZED</div>
-    <div id="sel-stat">SEL: 0.0s - 0.0s</div>
-
-    <div class="timeline-container" id="timeline">
-        <div id="sel-bracket" class="bracket" style="left: 0; width: 0; display: none;"></div>
-
-        <div class="lane" id="lane1">
-            <canvas id="wave1" style="position:absolute; top:0; left:0; height:100px; width:6000px; opacity:0.6; pointer-events:none;"></canvas>
-            <div id="clip1" class="clip" style="left:0; width:0px; border-bottom: 2px solid #f00;">L1: AUDIO</div>
-            <input type="range" id="vol1" class="vol-slider" style="left:10px; top:0;" min="0" max="1" step="0.01" value="1">
-        </div>
-
-        <div class="lane" id="lane2">
-            <canvas id="wave2" style="position:absolute; top:0; left:520px; height:100px; width:6000px; opacity:0.6; pointer-events:none;"></canvas>
-            <div id="clip2" class="clip track2" style="left:520px; width:0px; border-bottom: 2px solid #77f;">L2: STAGGER</div>
-            <input type="range" id="vol2" class="vol-slider" style="left:520px; top:80px;" min="0" max="1" step="0.01" value="1">
-        </div>
-
-        <div class="lane" id="lane3" style="background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-            <video id="v-monitor" style="height: 100%; border: 1px solid #330; background: #000;" muted></video>
-            <div id="clip3" class="clip" style="left:0; width:0px; border-color: #0f0; background: rgba(0,255,0,0.1); opacity: 0.5;">L3: VIDEO SOURCE</div>
-        </div>
-    </div>
-
-    <div class="nudge-panel">
-        <label>T2 OFFSET: <span id="offset-val">26.0</span>s</label><br>
-        <input type="range" id="nudge-range" min="20" max="32" step="0.1" value="26">
+    <div id="display">X200 READY // TOUCH TRACK TO DRAG</div>
+    
+    <div class="timeline-container" id="timeline" onclick="seek(event)">
+        <div id="playhead"></div>
+        <div class="lane" id="lane1"></div>
+        <div class="lane" id="lane2"></div>
+        <div class="lane" id="lane3" style="background:#000"><video id="v-monitor" style="height:100%;" muted></video></div>
     </div>
 
     <div class="controls">
-        <button class="btn" onclick="document.getElementById('f1').click()">LOAD L1</button>
-        <button class="btn" onclick="togglePlay()">PLAY</button>
-        <button class="btn" onclick="document.getElementById('f2').click()">LOAD L2</button>
-        
-        <button class="btn edit-mode" onclick="document.getElementById('f3').click()">LOAD VIDEO</button>
-        <button class="btn" onclick="jumpToDrop()">DROP (23s)</button>
-        <button class="btn" onclick="exportMix()">SAVE MIX</button>
-
+        <button class="btn" onclick="document.getElementById('f-audio').click()">+ AUDIO</button>
+        <button class="btn" onclick="document.getElementById('f-video').click()">+ VIDEO</button>
+        <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
         <button class="btn" onclick="stopAll()">STOP</button>
-        <button class="btn" onclick="undo()">UNDO</button>
+        
+        <div class="vol-box">L1 <input type="range" id="vol1" min="0" max="1" step="0.01" value="0.8" oninput="updateVol(1)"></div>
+        <div class="vol-box">L2 <input type="range" id="vol2" min="0" max="1" step="0.01" value="0.8" oninput="updateVol(2)"></div>
+        
+        <button class="btn" onclick="exportMix()">EXPORT</button>
+        <button class="btn" style="color:#ff0" onclick="setBracket()">BRACKET</button>
+        <button class="btn" onclick="copyAction()">COPY</button>
         <button class="btn" onclick="location.reload()">RESET</button>
+    </div>
 
-        <input type="file" id="f1" hidden onchange="loadTrack(1, this)">
-        <input type="file" id="f2" hidden onchange="loadTrack(2, this)">
-        <input type="file" id="f3" hidden accept="video/*" onchange="loadVideo(this)">
-    </div>
-    </div>
-    
+    <input type="file" id="f-audio" hidden accept="audio/*" onchange="handleFile(event, 'audio')">
+    <input type="file" id="f-video" hidden accept="video/*" onchange="handleFile(event, 'video')">
+</div>
+
 <script>
-    let actx = new (window.AudioContext || window.webkitAudioContext)();
-    let clips = { 1: null, 2: null };
-    let sources = { 1: null, 2: null };
-    let videoFile = null;
-    let offsets = { 1: 0, 2: 26.0 };
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
     const pxPerSec = 20;
+    let state = { playing: false, startAt: 0, offsetTime: 0, tracks: [], vTrack: null };
+    let gains = { 1: actx.createGain(), 2: actx.createGain() };
+    gains[1].connect(actx.destination); gains[2].connect(actx.destination);
 
-    // Load Video Logic
-    function loadVideo(input) {
-        const file = input.files[0];
+    function handleFile(e, type) {
+        const file = e.target.files[0];
         if (!file) return;
-        const video = document.getElementById('v-monitor');
-        video.src = URL.createObjectURL(file);
-        video.load();
-        document.getElementById('clip3').style.width = "6000px"; // Visual placeholder
-        document.getElementById('display').innerText = "VIDEO LOADED: " + file.name;
+        const reader = new FileReader();
+        reader.onload = async (res) => {
+            if (type === 'audio') {
+                const buffer = await actx.decodeAudioData(res.target.result);
+                createClip(buffer, file.name);
+            } else {
+                const v = document.getElementById('v-monitor');
+                v.src = URL.createObjectURL(file);
+                document.getElementById('display').innerText = "VIDEO LOADED";
+            }
+        };
+        type === 'audio' ? reader.readAsArrayBuffer(file) : reader.readAsDataURL(file);
     }
 
-    async function loadTrack(lane, input) {
-        const file = input.files[0];
-        if (!file) return;
-        const arrayBuf = await file.buffer ? await file.buffer() : await file.arrayBuffer();
-        clips[lane] = await actx.decodeAudioData(arrayBuf);
-        renderWaveform(lane, clips[lane]);
-        document.getElementById(`clip${lane}`).style.width = (clips[lane].duration * pxPerSec) + "px";
-        document.getElementById('display').innerText = "LOADED: L" + lane;
+    function createClip(buffer, name) {
+        const laneNum = state.tracks.length < 1 ? 1 : 2;
+        const clip = { id: Date.now(), buffer, offset: laneNum === 2 ? 26 : 0, lane: laneNum, duration: buffer.duration };
+        state.tracks.push(clip);
+        renderClip(clip);
     }
 
-    function renderWaveform(lane, buffer) {
-        const canvas = document.getElementById(`wave${lane}`);
+    function renderClip(clip) {
+        const div = document.createElement('div');
+        div.className = 'clip';
+        div.id = `clip-${clip.id}`;
+        div.innerText = clip.name || "TRACK";
+        div.style.width = (clip.duration * pxPerSec) + "px";
+        div.style.left = (clip.offset * pxPerSec) + "px";
+        
+        // Drag Logic
+        let startX = 0;
+        div.ontouchstart = (e) => {
+            startX = e.touches[0].clientX - div.offsetLeft;
+            div.classList.add('active');
+        };
+        div.ontouchmove = (e) => {
+            let newX = e.touches[0].clientX - startX;
+            newX = Math.max(0, newX);
+            div.style.left = newX + "px";
+            clip.offset = newX / pxPerSec;
+            document.getElementById('display').innerText = `POS: ${clip.offset.toFixed(2)}s`;
+        };
+        div.ontouchend = () => div.classList.remove('active');
+
+        const canv = document.createElement('canvas');
+        div.appendChild(canv);
+        document.getElementById(`lane${clip.lane}`).appendChild(div);
+        drawWave(clip.buffer, canv);
+    }
+
+    function drawWave(buffer, canvas) {
         const ctx = canvas.getContext('2d');
         const data = buffer.getChannelData(0);
-        const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = lane === 1 ? "#f00" : "#77f";
-        for (let i = 0; i < (buffer.duration * pxPerSec); i++) {
-            let min = 1.0, max = -1.0;
-            for (let j = 0; j < step; j++) {
-                const datum = data[(i * step) + j];
-                if (datum < min) min = datum;
-                if (datum > max) max = datum;
-            }
-            ctx.fillRect(i, (1 + min) * 50, 1, Math.max(1, (max - min) * 50));
+        const step = Math.ceil(data.length / 500);
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        for(let i=0; i<500; i++) {
+            let val = data[i*step];
+            ctx.fillRect(i*(canvas.width/500), 40, 1, val*40);
         }
     }
 
-    function togglePlay(s = 0) {
-        stopAll();
+    function togglePlay() {
+        if (state.playing) { stopAll(); return; }
+        state.playing = true;
+        state.offsetTime = actx.currentTime;
         const video = document.getElementById('v-monitor');
-        if (video.src) {
-            video.currentTime = s;
-            video.play();
-        }
-        [1, 2].forEach(l => {
-            if (clips[l]) {
-                sources[l] = actx.createBufferSource();
-                sources[l].buffer = clips[l];
-                const g = actx.createGain();
-                g.gain.value = document.getElementById(`vol${l}`).value;
-                sources[l].connect(g).connect(actx.destination);
-                let d = offsets[l] - s;
-                d < 0 ? sources[l].start(actx.currentTime, Math.abs(d)) : sources[l].start(actx.currentTime + d);
-            }
+        if (video.src) { video.currentTime = state.startAt; video.play(); }
+        
+        state.tracks.forEach(t => {
+            t.source = actx.createBufferSource();
+            t.source.buffer = t.buffer;
+            t.source.connect(gains[t.lane]);
+            let playDelay = t.offset - state.startAt;
+            if (playDelay < 0) t.source.start(0, Math.abs(playDelay));
+            else t.source.start(actx.currentTime + playDelay);
         });
-        document.getElementById('display').innerText = s > 0 ? "DROP JUMP ACTIVE" : "PLAYING";
+        document.getElementById('play-btn').innerText = "PAUSE";
+        requestAnimationFrame(updateNeedle);
+    }
+
+    function updateNeedle() {
+        if (!state.playing) return;
+        let elapsed = (actx.currentTime - state.offsetTime) + state.startAt;
+        document.getElementById('playhead').style.left = (elapsed * pxPerSec) + "px";
+        requestAnimationFrame(updateNeedle);
     }
 
     function stopAll() {
+        state.playing = false;
         const video = document.getElementById('v-monitor');
         if (video.src) video.pause();
-        [1, 2].forEach(l => { if(sources[l]) try{sources[l].stop()}catch(e){} });
+        state.tracks.forEach(t => { if(t.source) t.source.stop(); });
+        document.getElementById('play-btn').innerText = "PLAY";
     }
 
-    function jumpToDrop() { togglePlay(23.0); }
+    function updateVol(l) { gains[l].gain.value = document.getElementById(`vol${l}`).value; }
 
-    async function exportMix() {
-        if (!clips[1] && !clips[2]) return;
-        const duration = Math.max(clips[1]?.duration || 0, (clips[2]?.duration || 0) + offsets[2]);
-        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
-        [1, 2].forEach(l => {
-            if (clips[l]) {
-                const s = offCtx.createBufferSource(); s.buffer = clips[l];
-                const g = offCtx.createGain(); g.gain.value = document.getElementById(`vol${l}`).value;
-                s.connect(g).connect(offCtx.destination); s.start(offsets[l]);
-            }
-        });
-        const res = await offCtx.startRendering();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([bufferToWav(res)], {type:'audio/wav'}));
-        a.download = "X200_EXPORT.wav"; a.click();
-    }
-
-    function bufferToWav(abuffer) {
-        let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44, buf = new ArrayBuffer(len), view = new DataView(buf), pos = 0;
-        const set16 = (d) => { view.setInt16(pos, d, true); pos += 2; };
-        const set32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
-        set32(0x46464952); set32(len - 8); set32(0x45564157); set32(0x20746d66); set32(16); set16(1); set16(n); set32(abuffer.sampleRate); set32(abuffer.sampleRate * n * 2); set16(n * 2); set16(16); set32(0x61746164); set32(len - pos - 4);
-        for (let i = 0; i < abuffer.length; i++) {
-            for (let j = 0; j < n; j++) {
-                let s = Math.max(-1, Math.min(1, abuffer.getChannelData(j)[i]));
-                set16(s < 0 ? s * 0x8000 : s * 0x7FFF);
-            }
-        }
-        return buf;
+    function seek(e) {
+        const rect = document.getElementById('timeline').getBoundingClientRect();
+        state.startAt = (e.clientX + document.getElementById('timeline').scrollLeft - rect.left) / pxPerSec;
+        if (state.playing) { stopAll(); togglePlay(); }
+        else { document.getElementById('playhead').style.left = (state.startAt * pxPerSec) + "px"; }
     }
 </script>
 </body>
 </html>
-    
