@@ -3,173 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RED RAIN X200: UNLOCKED</title>
+    <title>X200: SLAM MERGE</title>
     <style>
         body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; }
-        .studio { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
-        
-        /* Display & Needle */
-        #display { font-size: 14px; height: 30px; text-align: center; color: #fff; border-bottom: 1px solid #400; letter-spacing: 1px; }
-        .timeline-container { flex-grow: 1; position: relative; background: #0a0000; border: 2px solid #300; overflow-x: auto; overflow-y: hidden; margin: 10px 0; }
-        #playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 500; pointer-events: none; left: 0; box-shadow: 0 0 10px #fff; }
-
-        /* Lanes & Clips */
-        .lane { height: 120px; position: relative; width: 10000px; border-bottom: 1px solid #200; background: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
-        .clip { position: absolute; height: 80px; top: 20px; background: rgba(255, 0, 0, 0.2); border: 1px solid #f00; color: #fff; font-size: 10px; padding: 5px; cursor: grab; z-index: 10; overflow: hidden; white-space: nowrap; }
-        .clip.active { border: 2px solid #ff0; box-shadow: 0 0 15px rgba(255,255,0,0.4); }
-        canvas { position: absolute; top: 0; left: 0; pointer-events: none; height: 100%; width: 100%; }
-
-        /* Controls */
-        .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: #000; padding: 5px; border: 1px solid #f33; }
-        .btn { padding: 12px 5px; background: #1a0000; color: #f33; border: 1px solid #500; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-        .btn:active { background: #f33; color: #000; }
-        .vol-box { grid-column: span 2; display: flex; align-items: center; justify-content: space-around; background: #111; border: 1px solid #333; }
-        input[type=range] { accent-color: #f33; width: 70%; }
+        .studio { display: flex; height: 100vh; }
+        #library { width: 160px; background: #0a0000; border-right: 2px solid #300; display: flex; flex-direction: column; padding: 5px; font-size: 10px; overflow-y: auto; }
+        .lib-item { padding: 10px 5px; background: #1a0000; margin: 4px 0; border: 1px solid #444; cursor: pointer; color: #aaa; text-transform: uppercase; }
+        .deck { flex-grow: 1; display: flex; flex-direction: column; }
+        #display { height: 35px; background: #000; text-align: center; line-height: 35px; border-bottom: 1px solid #400; color: #fff; font-size: 12px; }
+        .timeline-container { flex-grow: 1; position: relative; background: #080000; overflow-x: auto; overflow-y: hidden; }
+        .lane { height: 110px; position: relative; width: 10000px; border-bottom: 1px solid #200; background-image: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
+        #gutter { height: 40px; width: 10000px; background: #150000; position: relative; cursor: ew-resize; border-top: 1px solid #444; border-bottom: 1px solid #444; }
+        #playhead { position: absolute; top: -250px; width: 2px; background: #fff; z-index: 999; height: 600px; box-shadow: 0 0 10px #fff; pointer-events: none; }
+        .clip { position: absolute; height: 70px; top: 20px; background: rgba(255, 0, 0, 0.3); border: 1px solid #f00; color: #fff; z-index: 10; padding: 5px; font-size: 9px; }
+        .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #000; padding: 8px; border-top: 2px solid #f33; }
+        .btn { padding: 15px 2px; background: #1a0000; color: #f33; border: 1px solid #600; font-weight: bold; font-size: 11px; }
     </style>
 </head>
 <body>
-
 <div class="studio">
-    <div id="display">X200 READY // TOUCH TRACK TO DRAG</div>
-    
-    <div class="timeline-container" id="timeline" onclick="seek(event)">
-        <div id="playhead"></div>
-        <div class="lane" id="lane1"></div>
-        <div class="lane" id="lane2"></div>
-        <div class="lane" id="lane3" style="background:#000"><video id="v-monitor" style="height:100%;" muted></video></div>
+    <div id="library">
+        <strong>GARAGE (1-10)</strong><div id="lib-tracks"></div>
+        <hr style="border:1px solid #300">
+        <strong>MERGED (11-20)</strong><div id="lib-saves"></div>
     </div>
-
-    <div class="controls">
-        <button class="btn" onclick="document.getElementById('f-audio').click()">+ AUDIO</button>
-        <button class="btn" onclick="document.getElementById('f-video').click()">+ VIDEO</button>
-        <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
-        <button class="btn" onclick="stopAll()">STOP</button>
-        
-        <div class="vol-box">L1 <input type="range" id="vol1" min="0" max="1" step="0.01" value="0.8" oninput="updateVol(1)"></div>
-        <div class="vol-box">L2 <input type="range" id="vol2" min="0" max="1" step="0.01" value="0.8" oninput="updateVol(2)"></div>
-        
-        <button class="btn" onclick="exportMix()">EXPORT</button>
-        <button class="btn" style="color:#ff0" onclick="setBracket()">BRACKET</button>
-        <button class="btn" onclick="copyAction()">COPY</button>
-        <button class="btn" onclick="location.reload()">RESET</button>
+    <div class="deck">
+        <div id="display">READY // X200 ENGINE</div>
+        <div class="timeline-container" id="timeline">
+            <div id="playhead"></div>
+            <div class="lane" id="lane1"></div>
+            <div id="gutter" ontouchmove="scrub(event)" onclick="scrub(event)"></div>
+            <div class="lane" id="lane2"></div>
+        </div>
+        <div class="controls">
+            <button class="btn" onclick="document.getElementById('f-upload').click()">+ UPLOAD</button>
+            <button class="btn" onclick="slamMerge()" style="color:#ff0">SAVE SLAM</button>
+            <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
+            <button class="btn" onclick="exportFinal()" style="color:#fff">EXPORT</button>
+            <input type="file" id="f-upload" hidden onchange="uploadToLib(event)">
+        </div>
     </div>
-
-    <input type="file" id="f-audio" hidden accept="audio/*" onchange="handleFile(event, 'audio')">
-    <input type="file" id="f-video" hidden accept="video/*" onchange="handleFile(event, 'video')">
 </div>
-
 <script>
     const actx = new (window.AudioContext || window.webkitAudioContext)();
     const pxPerSec = 20;
-    let state = { playing: false, startAt: 0, offsetTime: 0, tracks: [], vTrack: null };
-    let gains = { 1: actx.createGain(), 2: actx.createGain() };
-    gains[1].connect(actx.destination); gains[2].connect(actx.destination);
+    let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, mergeCount: 0 };
+    let downloads = [], merges = new Array(10).fill(null);
 
-    function handleFile(e, type) {
+    function uploadToLib(e) {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file || downloads.length >= 10) return;
         const reader = new FileReader();
-        reader.onload = async (res) => {
-            if (type === 'audio') {
-                const buffer = await actx.decodeAudioData(res.target.result);
-                createClip(buffer, file.name);
-            } else {
-                const v = document.getElementById('v-monitor');
-                v.src = URL.createObjectURL(file);
-                document.getElementById('display').innerText = "VIDEO LOADED";
-            }
+        reader.onload = async (r) => {
+            const buffer = await actx.decodeAudioData(r.target.result);
+            downloads.push({ name: file.name, buffer });
+            updateLibUI();
         };
-        type === 'audio' ? reader.readAsArrayBuffer(file) : reader.readAsDataURL(file);
+        reader.readAsArrayBuffer(file);
     }
 
-    function createClip(buffer, name) {
-        const laneNum = state.tracks.length < 1 ? 1 : 2;
-        const clip = { id: Date.now(), buffer, offset: laneNum === 2 ? 26 : 0, lane: laneNum, duration: buffer.duration };
-        state.tracks.push(clip);
-        renderClip(clip);
+    function updateLibUI() {
+        const tCont = document.getElementById('lib-tracks'); tCont.innerHTML = '';
+        downloads.forEach((t, i) => {
+            const div = document.createElement('div'); div.className = 'lib-item';
+            div.innerText = `${i+1}: ${t.name.substring(0,10)}`;
+            div.onclick = () => inject(t); tCont.appendChild(div);
+        });
     }
 
-    function renderClip(clip) {
-        const div = document.createElement('div');
-        div.className = 'clip';
-        div.id = `clip-${clip.id}`;
-        div.innerText = clip.name || "TRACK";
-        div.style.width = (clip.duration * pxPerSec) + "px";
+    function inject(track) {
+        if (!state.bar1) { state.bar1 = { buffer: track.buffer, offset: 0 }; render(1, state.bar1); }
+        else { state.bar2 = { buffer: track.buffer, offset: 5 }; render(2, state.bar2); }
+    }
+
+    function render(lane, clip) {
+        const lEl = document.getElementById(`lane${lane}`); lEl.innerHTML = '';
+        const div = document.createElement('div'); div.className = 'clip';
+        div.style.width = (clip.buffer.duration * pxPerSec) + "px";
         div.style.left = (clip.offset * pxPerSec) + "px";
-        
-        // Drag Logic
         let startX = 0;
-        div.ontouchstart = (e) => {
-            startX = e.touches[0].clientX - div.offsetLeft;
-            div.classList.add('active');
-        };
+        div.ontouchstart = (e) => { startX = e.touches[0].clientX - div.offsetLeft; };
         div.ontouchmove = (e) => {
-            let newX = e.touches[0].clientX - startX;
-            newX = Math.max(0, newX);
-            div.style.left = newX + "px";
-            clip.offset = newX / pxPerSec;
-            document.getElementById('display').innerText = `POS: ${clip.offset.toFixed(2)}s`;
+            let x = e.touches[0].clientX - startX;
+            clip.offset = Math.max(0, x / pxPerSec); div.style.left = x + "px";
         };
-        div.ontouchend = () => div.classList.remove('active');
-
-        const canv = document.createElement('canvas');
-        div.appendChild(canv);
-        document.getElementById(`lane${clip.lane}`).appendChild(div);
-        drawWave(clip.buffer, canv);
+        lEl.appendChild(div);
     }
 
-    function drawWave(buffer, canvas) {
-        const ctx = canvas.getContext('2d');
-        const data = buffer.getChannelData(0);
-        const step = Math.ceil(data.length / 500);
-        ctx.fillStyle = "rgba(255,255,255,0.3)";
-        for(let i=0; i<500; i++) {
-            let val = data[i*step];
-            ctx.fillRect(i*(canvas.width/500), 40, 1, val*40);
-        }
+    function scrub(e) {
+        e.preventDefault();
+        const rect = document.getElementById('timeline').getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left + document.getElementById('timeline').scrollLeft;
+        state.currentTime = x / pxPerSec;
+        document.getElementById('playhead').style.left = x + "px";
+        if (state.playing) { stop(); togglePlay(); }
+    }
+
+    async function slamMerge() {
+        if (!state.bar1 || !state.bar2) return;
+        const duration = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
+        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
+        [state.bar1, state.bar2].forEach(b => {
+            const s = offCtx.createBufferSource(); s.buffer = b.buffer;
+            s.connect(offCtx.destination); s.start(b.offset);
+        });
+        const mergedBuf = await offCtx.startRendering();
+        state.bar1 = { buffer: mergedBuf, offset: 0 }; state.bar2 = null;
+        const slotIdx = state.mergeCount % 10; merges[slotIdx] = mergedBuf; state.mergeCount++;
+        updateMergeUI(); render(1, state.bar1);
+        document.getElementById('lane2').innerHTML = '';
+        document.getElementById('display').innerText = `MERGED TO SLOT ${slotIdx + 11}`;
+    }
+
+    function updateMergeUI() {
+        const mCont = document.getElementById('lib-saves'); mCont.innerHTML = '';
+        merges.forEach((m, i) => { if (m) {
+            const div = document.createElement('div'); div.className = 'lib-item';
+            div.innerText = `SLOT ${i+11}`;
+            div.onclick = () => { state.bar1 = { buffer: m, offset: 0 }; render(1, state.bar1); };
+            mCont.appendChild(div);
+        }});
     }
 
     function togglePlay() {
-        if (state.playing) { stopAll(); return; }
-        state.playing = true;
-        state.offsetTime = actx.currentTime;
-        const video = document.getElementById('v-monitor');
-        if (video.src) { video.currentTime = state.startAt; video.play(); }
-        
-        state.tracks.forEach(t => {
-            t.source = actx.createBufferSource();
-            t.source.buffer = t.buffer;
-            t.source.connect(gains[t.lane]);
-            let playDelay = t.offset - state.startAt;
-            if (playDelay < 0) t.source.start(0, Math.abs(playDelay));
-            else t.source.start(actx.currentTime + playDelay);
-        });
+        if (state.playing) { stop(); return; }
+        state.playing = true; state.startTime = actx.currentTime;
+        [state.bar1, state.bar2].forEach(b => { if (b) {
+            b.source = actx.createBufferSource(); b.source.buffer = b.buffer;
+            b.source.connect(actx.destination);
+            let d = b.offset - state.currentTime;
+            d < 0 ? b.source.start(0, Math.abs(d)) : b.source.start(actx.currentTime + d);
+        }});
         document.getElementById('play-btn').innerText = "PAUSE";
-        requestAnimationFrame(updateNeedle);
+        requestAnimationFrame(sync);
     }
 
-    function updateNeedle() {
+    function stop() {
+        state.playing = false; state.currentTime += (actx.currentTime - state.startTime);
+        [state.bar1, state.bar2].forEach(b => { if (b?.source) b.source.stop(); });
+        document.getElementById('play-btn').innerText = "RESUME";
+    }
+
+    function sync() {
         if (!state.playing) return;
-        let elapsed = (actx.currentTime - state.offsetTime) + state.startAt;
-        document.getElementById('playhead').style.left = (elapsed * pxPerSec) + "px";
-        requestAnimationFrame(updateNeedle);
+        let now = (actx.currentTime - state.startTime) + state.currentTime;
+        document.getElementById('playhead').style.left = (now * pxPerSec) + "px";
+        requestAnimationFrame(sync);
     }
 
-    function stopAll() {
-        state.playing = false;
-        const video = document.getElementById('v-monitor');
-        if (video.src) video.pause();
-        state.tracks.forEach(t => { if(t.source) t.source.stop(); });
-        document.getElementById('play-btn').innerText = "PLAY";
+    function exportFinal() {
+        if (!state.bar1) return;
+        const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = "X200_EXPORT.wav"; a.click();
     }
 
-    function updateVol(l) { gains[l].gain.value = document.getElementById(`vol${l}`).value; }
-
-    function seek(e) {
-        const rect = document.getElementById('timeline').getBoundingClientRect();
-        state.startAt = (e.clientX + document.getElementById('timeline').scrollLeft - rect.left) / pxPerSec;
-        if (state.playing) { stopAll(); togglePlay(); }
-        else { document.getElementById('playhead').style.left = (state.startAt * pxPerSec) + "px"; }
+    function bufferToWav(abuffer) {
+        let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44, buf = new ArrayBuffer(len), view = new DataView(buf), pos = 0;
+        const set16 = (d) => { view.setInt16(pos, d, true); pos += 2; };
+        const set32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
+        set32(0x46464952); set32(len - 8); set32(0x45564157); set32(0x20746d66); set32(16); set16(1); set16(n); set32(abuffer.sampleRate); set32(abuffer.sampleRate * n * 2); set16(n * 2); set16(16); set32(0x61746164); set32(len - pos - 4);
+        for (let i = 0; i < abuffer.length; i++) { for (let j = 0; j < n; j++) {
+            let s = Math.max(-1, Math.min(1, abuffer.getChannelData(j)[i]));
+            set16(s < 0 ? s * 0x8000 : s * 0x7FFF);
+        }}
+        return buf;
     }
 </script>
 </body>
