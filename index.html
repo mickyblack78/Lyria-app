@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X200: SLAM MERGE</title>
+    <title>X200: V4.3 LOCK-TO-X</title>
     <style>
         body { background: #050000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; }
         .studio { display: flex; height: 100vh; }
@@ -12,12 +12,13 @@
         .deck { flex-grow: 1; display: flex; flex-direction: column; }
         #display { height: 35px; background: #000; text-align: center; line-height: 35px; border-bottom: 1px solid #400; color: #fff; font-size: 12px; }
         .timeline-container { flex-grow: 1; position: relative; background: #080000; overflow-x: auto; overflow-y: hidden; }
-        .lane { height: 110px; position: relative; width: 10000px; border-bottom: 1px solid #200; background-image: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
+        .lane { height: 140px; position: relative; width: 10000px; border-bottom: 1px solid #200; background-image: linear-gradient(90deg, #110000 1px, transparent 1px); background-size: 20px 100%; }
         #gutter { height: 40px; width: 10000px; background: #150000; position: relative; cursor: ew-resize; border-top: 1px solid #444; border-bottom: 1px solid #444; }
-        #playhead { position: absolute; top: -250px; width: 2px; background: #fff; z-index: 999; height: 600px; box-shadow: 0 0 10px #fff; pointer-events: none; }
-        .clip { position: absolute; height: 70px; top: 20px; background: rgba(255, 0, 0, 0.3); border: 1px solid #f00; color: #fff; z-index: 10; padding: 5px; font-size: 9px; }
-        .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #000; padding: 8px; border-top: 2px solid #f33; }
-        .btn { padding: 15px 2px; background: #1a0000; color: #f33; border: 1px solid #600; font-weight: bold; font-size: 11px; }
+        #playhead { position: absolute; top: -350px; width: 2px; background: #fff; z-index: 999; height: 800px; box-shadow: 0 0 10px #fff; pointer-events: none; }
+        .clip { position: absolute; height: 100px; top: 20px; background: rgba(255, 0, 0, 0.4); border: 1px solid #f00; color: #fff; z-index: 10; font-size: 9px; overflow: hidden; }
+        .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #000; padding: 8px; border-top: 2px solid #f33; }
+        .btn { padding: 15px 2px; background: #1a0000; color: #f33; border: 1px solid #600; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+        .active-lock { background: #440000; border-color: #f00; color: #fff; box-shadow: inset 0 0 10px #f00; }
     </style>
 </head>
 <body>
@@ -28,15 +29,16 @@
         <strong>MERGED (11-20)</strong><div id="lib-saves"></div>
     </div>
     <div class="deck">
-        <div id="display">READY // X200 ENGINE</div>
+        <div id="display">X200 ENGINE READY // V4.3</div>
         <div class="timeline-container" id="timeline">
-            <div id="playhead"></div>
+            <div id="playhead" style="left:0;"></div>
             <div class="lane" id="lane1"></div>
             <div id="gutter" ontouchmove="scrub(event)" onclick="scrub(event)"></div>
             <div class="lane" id="lane2"></div>
         </div>
         <div class="controls">
             <button class="btn" onclick="document.getElementById('f-upload').click()">+ UPLOAD</button>
+            <button class="btn" id="lock-btn" onclick="toggleLock()">LOCK FADE</button>
             <button class="btn" onclick="slamMerge()" style="color:#ff0">SAVE SLAM</button>
             <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
             <button class="btn" onclick="exportFinal()" style="color:#fff">EXPORT</button>
@@ -47,17 +49,15 @@
 <script>
     const actx = new (window.AudioContext || window.webkitAudioContext)();
     const pxPerSec = 20;
-    let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, mergeCount: 0 };
+    let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, mergeCount: 0, locked: false };
     let downloads = [], merges = new Array(10).fill(null);
 
     function uploadToLib(e) {
-        const file = e.target.files[0];
-        if (!file || downloads.length >= 10) return;
+        const file = e.target.files[0]; if (!file || downloads.length >= 10) return;
         const reader = new FileReader();
         reader.onload = async (r) => {
             const buffer = await actx.decodeAudioData(r.target.result);
-            downloads.push({ name: file.name, buffer });
-            updateLibUI();
+            downloads.push({ name: file.name, buffer }); updateLibUI();
         };
         reader.readAsArrayBuffer(file);
     }
@@ -99,20 +99,36 @@
         if (state.playing) { stop(); togglePlay(); }
     }
 
+    function toggleLock() {
+        state.locked = !state.locked;
+        document.getElementById('lock-btn').className = state.locked ? 'btn active-lock' : 'btn';
+        document.getElementById('display').innerText = state.locked ? "FADE ARMED AT X" : "MANUAL MODE";
+    }
+
     async function slamMerge() {
         if (!state.bar1 || !state.bar2) return;
         const duration = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
         const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
-        [state.bar1, state.bar2].forEach(b => {
-            const s = offCtx.createBufferSource(); s.buffer = b.buffer;
-            s.connect(offCtx.destination); s.start(b.offset);
-        });
+        
+        // Lane 1 Bake
+        const s1 = offCtx.createBufferSource(); s1.buffer = state.bar1.buffer;
+        const g1 = offCtx.createGain(); s1.connect(g1); g1.connect(offCtx.destination);
+        s1.start(state.bar1.offset);
+        if(state.locked) {
+            g1.gain.setValueAtTime(1, state.bar2.offset);
+            g1.gain.linearRampToValueAtTime(0, state.bar2.offset + 2);
+        }
+
+        // Lane 2 Bake
+        const s2 = offCtx.createBufferSource(); s2.buffer = state.bar2.buffer;
+        s2.connect(offCtx.destination); s2.start(state.bar2.offset);
+
         const mergedBuf = await offCtx.startRendering();
         state.bar1 = { buffer: mergedBuf, offset: 0 }; state.bar2 = null;
         const slotIdx = state.mergeCount % 10; merges[slotIdx] = mergedBuf; state.mergeCount++;
         updateMergeUI(); render(1, state.bar1);
         document.getElementById('lane2').innerHTML = '';
-        document.getElementById('display').innerText = `MERGED TO SLOT ${slotIdx + 11}`;
+        document.getElementById('display').innerText = `SAVED TO SLOT ${slotIdx + 11}`;
     }
 
     function updateMergeUI() {
@@ -155,7 +171,7 @@
         if (!state.bar1) return;
         const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "X200_EXPORT.wav"; a.click();
+        a.download = "X200_FINAL.wav"; a.click();
     }
 
     function bufferToWav(abuffer) {
