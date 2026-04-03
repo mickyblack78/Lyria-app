@@ -91,15 +91,25 @@
     let actx = new (window.AudioContext || window.webkitAudioContext)();
     let clips = { 1: null, 2: null };
     let sources = { 1: null, 2: null };
+    let videoFile = null;
     let offsets = { 1: 0, 2: 26.0 };
-    let selection = { start: 0, end: 5 };
-
     const pxPerSec = 20;
+
+    // Load Video Logic
+    function loadVideo(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const video = document.getElementById('v-monitor');
+        video.src = URL.createObjectURL(file);
+        video.load();
+        document.getElementById('clip3').style.width = "6000px"; // Visual placeholder
+        document.getElementById('display').innerText = "VIDEO LOADED: " + file.name;
+    }
 
     async function loadTrack(lane, input) {
         const file = input.files[0];
         if (!file) return;
-        const arrayBuf = await file.arrayBuffer();
+        const arrayBuf = await file.buffer ? await file.buffer() : await file.arrayBuffer();
         clips[lane] = await actx.decodeAudioData(arrayBuf);
         renderWaveform(lane, clips[lane]);
         document.getElementById(`clip${lane}`).style.width = (clips[lane].duration * pxPerSec) + "px";
@@ -124,33 +134,50 @@
         }
     }
 
-    async function exportMix() {
-        if (!clips[1] && !clips[2]) return;
-        document.getElementById('display').innerText = "RENDERING...";
-        const duration = Math.max(
-            clips[1] ? clips[1].duration : 0, 
-            clips[2] ? clips[2].duration + offsets[2] : 0
-        );
-        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
-        
-        [1, 2].forEach(lane => {
-            if (clips[lane]) {
-                const s = offCtx.createBufferSource();
-                s.buffer = clips[lane];
-                const g = offCtx.createGain();
-                g.gain.value = document.getElementById(`vol${lane}`).value;
-                s.connect(g).connect(offCtx.destination);
-                s.start(offsets[lane]);
+    function togglePlay(s = 0) {
+        stopAll();
+        const video = document.getElementById('v-monitor');
+        if (video.src) {
+            video.currentTime = s;
+            video.play();
+        }
+        [1, 2].forEach(l => {
+            if (clips[l]) {
+                sources[l] = actx.createBufferSource();
+                sources[l].buffer = clips[l];
+                const g = actx.createGain();
+                g.gain.value = document.getElementById(`vol${l}`).value;
+                sources[l].connect(g).connect(actx.destination);
+                let d = offsets[l] - s;
+                d < 0 ? sources[l].start(actx.currentTime, Math.abs(d)) : sources[l].start(actx.currentTime + d);
             }
         });
+        document.getElementById('display').innerText = s > 0 ? "DROP JUMP ACTIVE" : "PLAYING";
+    }
 
-        const renderedBuffer = await offCtx.startRendering();
-        const blob = new Blob([bufferToWav(renderedBuffer)], {type:'audio/wav'});
+    function stopAll() {
+        const video = document.getElementById('v-monitor');
+        if (video.src) video.pause();
+        [1, 2].forEach(l => { if(sources[l]) try{sources[l].stop()}catch(e){} });
+    }
+
+    function jumpToDrop() { togglePlay(23.0); }
+
+    async function exportMix() {
+        if (!clips[1] && !clips[2]) return;
+        const duration = Math.max(clips[1]?.duration || 0, (clips[2]?.duration || 0) + offsets[2]);
+        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
+        [1, 2].forEach(l => {
+            if (clips[l]) {
+                const s = offCtx.createBufferSource(); s.buffer = clips[l];
+                const g = offCtx.createGain(); g.gain.value = document.getElementById(`vol${l}`).value;
+                s.connect(g).connect(offCtx.destination); s.start(offsets[l]);
+            }
+        });
+        const res = await offCtx.startRendering();
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = "RED_RAIN_X200_EXPORT.wav";
-        a.click();
-        document.getElementById('display').innerText = "EXPORT COMPLETE";
+        a.href = URL.createObjectURL(new Blob([bufferToWav(res)], {type:'audio/wav'}));
+        a.download = "X200_EXPORT.wav"; a.click();
     }
 
     function bufferToWav(abuffer) {
@@ -166,10 +193,7 @@
         }
         return buf;
     }
-
-    function togglePlay(s = 0) {
-        stopAll();
-        [1, 2].forEach(l => {
-            if (clips[l]) {
-                sources[l] = actx.createBufferSource();
-                sources[l
+</script>
+</body>
+</html>
+    
