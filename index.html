@@ -3,161 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LYRIA: X200 POSSESSED EDITION</title>
+    <title>RED RAIN: DUAL-LANE EDITOR</title>
     <style>
-        body { background: #050000; color: #ff0000; font-family: 'Courier New', monospace; text-align: center; padding: 10px; overflow-x: hidden; }
-        .box { border: 2px solid #800; padding: 15px; background: #110000; box-shadow: 0 0 20px #500; max-width: 600px; margin: auto; }
-        #display { background: #000; padding: 15px; margin-bottom: 10px; border: 1px solid #ff0000; color: #ff0000; text-shadow: 0 0 5px #f00; font-size: 1.2em; }
-        canvas { width: 100%; height: 150px; background: #000; border: 1px solid #300; margin: 10px 0; }
-        .btn { width: 48%; margin: 4px 1%; padding: 15px; background: #200; color: #ff0000; border: 2px solid #ff0000; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn:hover { background: #ff0000; color: #000; }
-        input[type="file"] { background: #1a0000; color: #ff0000; width: 100%; padding: 15px; margin: 10px 0; border: 1px dashed #ff0000; }
-        .status { font-size: 0.8em; color: #600; margin-top: 10px; }
+        body { background: #0a0000; color: #ff3333; font-family: 'Courier New', monospace; margin: 0; padding: 10px; user-select: none; }
+        .studio-box { border: 2px solid #600; background: #110000; padding: 15px; max-width: 800px; margin: auto; box-shadow: 0 0 30px #400; }
+        #display { background: #000; border: 1px solid #900; padding: 10px; margin-bottom: 15px; font-size: 0.9em; min-height: 40px; color: #f00; }
+        
+        /* The Timeline Lanes */
+        .timeline { position: relative; background: #050000; border: 1px solid #444; height: 160px; margin: 10px 0; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+        .lane { height: 70px; border-bottom: 1px solid #222; position: relative; width: 2000px; }
+        .clip { position: absolute; height: 60px; background: rgba(150, 0, 0, 0.6); border: 2px solid #f00; top: 5px; color: #fff; font-size: 10px; padding: 5px; box-sizing: border-box; overflow: hidden; }
+        .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; z-index: 10; pointer-events: none; }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 15px; background: #200; color: #f33; border: 2px solid #800; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn:active { background: #800; color: #fff; }
+        .nudge-btn { background: #400; width: 48%; }
+        
+        input[type="text"] { background: #000; border: 1px solid #f33; color: #f33; padding: 10px; width: 100%; box-sizing: border-box; margin: 10px 0; }
+        .file-label { display: block; background: #ff3333; color: #000; padding: 10px; text-align: center; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        input[type="file"] { display: none; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2 style="letter-spacing: 5px;">LYRIA CORE: RED RAIN</h2>
-        <div id="display">SYSTEM IDLE: LOAD TECHNO</div>
-        
-        <canvas id="viz"></canvas>
 
-        <input type="file" id="f-in" multiple accept="audio/*">
-        
-        <div style="display:flex; flex-wrap: wrap;">
-            <button class="btn" onclick="play()">ENGAGE</button>
-            <button class="btn" onclick="stop()">ABORT</button>
-            <button class="btn" onclick="next()">SKIP TRACK</button>
-            <button class="btn" onclick="stitch26()">STITCH (26s OVERLAP)</button>
-        </div>
+<div class="studio-box">
+    <h2 style="margin:0 0 10px 0; text-shadow: 0 0 10px #f00;">RED RAIN DAW v1.0</h2>
+    
+    <input type="text" id="proj-name" placeholder="ENTER COMPILATION NAME...">
+    
+    <div id="display">SYSTEM READY // LOAD TRACKS 1 & 2</div>
 
-        <div class="status">BCM ERROR: WIPER PULSE ACTIVE // RED_RAIN.exe</div>
+    <div class="timeline" id="tl">
+        <div class="playhead" id="ph"></div>
+        <div class="lane" id="lane1"></div>
+        <div class="lane" id="lane2"></div>
     </div>
 
-    <script>
-        let t=[], c=0, actx, src, ana, data, canvas, ctx;
-        const aud = new Audio();
-        canvas = document.getElementById('viz');
-        ctx = canvas.getContext('2d');
+    <div class="controls">
+        <div>
+            <label class="file-label">LOAD L1<input type="file" onchange="loadClip(1, this)"></label>
+            <label class="file-label">LOAD L2<input type="file" onchange="loadClip(2, this)"></label>
+        </div>
+        <div>
+            <button class="btn" style="width:100%; height:100%;" onclick="togglePlay()">PLAY / PAUSE</button>
+        </div>
+    </div>
 
-        // File Loading
-        document.getElementById('f-in').onchange = (e) => {
-            t = Array.from(e.target.files).map(f => ({ b: f, u: URL.createObjectURL(f), n: f.name }));
-            document.getElementById('display').innerText = t.length + " COMMANDS LOADED";
-        };
+    <div style="margin-top:10px;">
+        <p style="font-size:10px;">NUDGE TRACK 2 OFFSET:</p>
+        <button class="btn nudge-btn" onclick="nudge(-0.5)">- 0.5s</button>
+        <button class="btn nudge-btn" onclick="nudge(0.5)">+ 0.5s</button>
+    </div>
 
-        // Visualizer Setup (Red Rain / Wipers)
-        function initViz() {
-            if (!actx) {
-                actx = new (window.AudioContext || window.webkitAudioContext)();
-                src = actx.createMediaElementSource(aud);
-                ana = actx.createAnalyser();
-                src.connect(ana);
-                ana.connect(actx.destination);
-                ana.fftSize = 256;
-                data = new Uint8Array(ana.frequencyBinCount);
-                draw();
+    <div style="margin-top:15px; display: flex; gap: 10px;">
+        <button class="btn" style="flex:1;" onclick="exportMix()">SAVE COMPILATION</button>
+        <button class="btn" style="flex:1; background: #000;" onclick="undo()">UNDO</button>
+    </div>
+</div>
+
+<script>
+    let actx = new (window.AudioContext || window.webkitAudioContext)();
+    let clips = { 1: null, 2: null };
+    let offsets = { 1: 0, 2: 26.0 }; // Defaulting Track 2 to start at 26s
+    let isPlaying = false;
+    let startTime = 0;
+    let pausedAt = 0;
+    let history = [];
+
+    function updateDisplay(msg) { document.getElementById('display').innerText = msg; }
+
+    async function loadClip(lane, input) {
+        if (!input.files[0]) return;
+        saveState(); // For Undo
+        const file = input.files[0];
+        const arrayBuf = await file.arrayBuffer();
+        const audioBuf = await actx.decodeAudioData(arrayBuf);
+        
+        clips[lane] = { buffer: audioBuf, name: file.name };
+        renderTimeline();
+        updateDisplay(`LANE ${lane} LOADED: ${file.name}`);
+    }
+
+    function renderTimeline() {
+        [1, 2].forEach(lane => {
+            const el = document.getElementById(`lane${lane}`);
+            el.innerHTML = '';
+            if (clips[lane]) {
+                const div = document.createElement('div');
+                div.className = 'clip';
+                div.style.left = (offsets[lane] * 20) + 'px'; // 20px per second
+                div.style.width = (clips[lane].buffer.duration * 20) + 'px';
+                div.innerText = clips[lane].name;
+                el.appendChild(div);
             }
-        }
+        });
+    }
 
-        function draw() {
-            requestAnimationFrame(draw);
-            ana.getByteFrequencyData(data);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Tail effect
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function nudge(val) {
+        saveState();
+        offsets[2] = Math.max(0, offsets[2] + val);
+        updateDisplay(`TRACK 2 OFFSET: ${offsets[2].toFixed(1)}s`);
+        renderTimeline();
+        if(isPlaying) { togglePlay(); togglePlay(); } // Restart to hear change
+    }
 
-            // The "Red Rain" bars
-            for (let i = 0; i < data.length; i++) {
-                let h = data[i] / 2;
-                ctx.fillStyle = `rgb(${data[i] + 100}, 0, 0)`;
-                ctx.fillRect(i * 3, canvas.height - h, 2, h);
-            }
-
-            // The "Wiper" Sweep (A visual line moving across)
-            let sweep = (Date.now() % 2000) / 2000 * canvas.width;
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(sweep, 0);
-            ctx.lineTo(sweep - 20, canvas.height);
-            ctx.stroke();
-        }
-
-        function play() {
-            if (t[c]) {
-                initViz();
+    function togglePlay() {
+        if (isPlaying) {
+            actx.suspend();
+            isPlaying = false;
+        } else {
+            if (actx.state === 'suspended') {
                 actx.resume();
-                aud.src = t[c].u;
-                aud.play();
-                document.getElementById('display').innerText = "PLAYING: " + t[c].n;
+            } else {
+                playClips();
             }
+            isPlaying = true;
+            animatePlayhead();
         }
+    }
 
-        function stop() { aud.pause(); aud.currentTime = 0; document.getElementById('display').innerText = "HALTED"; }
-        function next() { c = (c + 1) % t.length; play(); }
-        aud.onended = () => { next(); };
-
-        // THE PRO STITCH: Merges files with a 26-second overlap
-        async function stitch26() {
-            if (t.length < 2) { alert("Need at least 2 tracks to overlap."); return; }
-            document.getElementById('display').innerText = "STITCHING...";
-            
-            let tempCtx = new OfflineAudioContext(2, 44100 * 300, 44100); // 5 min max
-            let offset = 0;
-
-            for (let i = 0; i < t.length; i++) {
-                let res = await fetch(t[i].u);
-                let buf = await tempCtx.decodeAudioData(await res.arrayBuffer());
-                let source = tempCtx.createBufferSource();
-                source.buffer = buf;
-                source.connect(tempCtx.destination);
-                source.start(offset);
-                
-                // Set the next track to start 26 seconds after this one began
-                if (i < t.length - 1) offset += 26; 
+    function playClips() {
+        [1, 2].forEach(lane => {
+            if (clips[lane]) {
+                const source = actx.createBufferSource();
+                source.buffer = clips[lane].buffer;
+                source.connect(actx.destination);
+                source.start(actx.currentTime, 0); 
+                // Note: Simplified playback for mobile preview
             }
+        });
+    }
 
-            let rendered = await tempCtx.startRendering();
-            saveBuffer(rendered);
+    function animatePlayhead() {
+        if (!isPlaying) return;
+        let pos = (actx.currentTime % 60) * 20;
+        document.getElementById('ph').style.left = pos + 'px';
+        requestAnimationFrame(animatePlayhead);
+    }
+
+    function saveState() {
+        history.push(JSON.stringify({ offsets: {...offsets} }));
+        if (history.length > 10) history.shift();
+    }
+
+    function undo() {
+        if (history.length > 0) {
+            const state = JSON.parse(history.pop());
+            offsets = state.offsets;
+            renderTimeline();
+            updateDisplay("UNDO PERFORMED");
         }
+    }
 
-        function saveBuffer(buffer) {
-            let wav = audioBufferToWav(buffer);
-            let blob = new Blob([wav], { type: 'audio/wav' });
-            let l = document.createElement('a');
-            l.href = URL.createObjectURL(blob);
-            l.download = "X200_Possessed_Final.wav";
-            l.click();
-            document.getElementById('display').innerText = "EXPORT COMPLETE";
-        }
+    async function exportMix() {
+        const name = document.getElementById('proj-name').value || "RED_RAIN_MIX";
+        updateDisplay("RENDERING FINAL TRACK...");
+        
+        const duration = Math.max(
+            (clips[1] ? clips[1].buffer.duration : 0),
+            (clips[2] ? offsets[2] + clips[2].buffer.duration : 0)
+        );
 
-        // Helper to convert internal buffer to a file
-        function audioBufferToWav(buffer) {
-            let numOfChan = buffer.numberOfChannels,
-                length = buffer.length * numOfChan * 2 + 44,
-                out = new ArrayBuffer(length),
-                view = new DataView(out),
-                channels = [], i, sample, offset = 0, pos = 0;
-
-            function setUint32(d) { view.setUint32(pos, d, true); pos += 4; }
-            function setUint16(d) { view.setUint16(pos, d, true); pos += 2; }
-
-            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
-            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
-            setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
-
-            for (i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
-            while (pos < length) {
-                for (i = 0; i < numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-                    pos += 2;
-                }
-                offset++;
+        const offCtx = new OfflineAudioContext(2, 44100 * duration, 44100);
+        
+        [1, 2].forEach(lane => {
+            if (clips[lane]) {
+                const source = offCtx.createBufferSource();
+                source.buffer = clips[lane].buffer;
+                source.connect(offCtx.destination);
+                source.start(offsets[lane]);
             }
-            return out;
+        });
+
+        const rendered = await offCtx.startRendering();
+        const blob = new Blob([bufferToWav(rendered)], { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name}.wav`;
+        a.click();
+        updateDisplay("COMPILATION SAVED.");
+    }
+
+    // Standard Wav Encoder
+    function bufferToWav(abuffer) {
+        let numOfChan = abuffer.numberOfChannels,
+            length = abuffer.length * numOfChan * 2 + 44,
+            buffer = new ArrayBuffer(length),
+            view = new DataView(buffer),
+            channels = [], i, sample, offset = 0, pos = 0;
+        function setUint32(d) { view.setUint32(pos, d, true); pos += 4; }
+        function setUint16(d) { view.setUint16(pos, d, true); pos += 2; }
+        setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+        setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+        setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan);
+        setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+        for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+        while (pos < length) {
+            for (i = 0; i < numOfChan; i++) {
+                sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                pos += 2;
+            }
+            offset++;
         }
-    </script>
+        return buffer;
+    }
+</script>
 </body>
 </html>
