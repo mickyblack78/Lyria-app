@@ -3,72 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lyria Engine</title>
+    <title>LYRIA: X200 POSSESSED EDITION</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 15px; }
-        .box { border: 2px solid #0f0; padding: 15px; background: #111; }
-        #display { background: #222; padding: 15px; margin-bottom: 10px; border: 1px solid #444; }
-        .btn { width: 48%; margin: 4px 1%; padding: 20px; background: #000; color: #0f0; border: 2px solid #0f0; font-weight: bold; }
-        input[type="file"] { background: #222; color: #0f0; width: 100%; padding: 20px; margin: 10px 0; border: 1px dashed #0f0; }
+        body { background: #050000; color: #ff0000; font-family: 'Courier New', monospace; text-align: center; padding: 10px; overflow-x: hidden; }
+        .box { border: 2px solid #800; padding: 15px; background: #110000; box-shadow: 0 0 20px #500; max-width: 600px; margin: auto; }
+        #display { background: #000; padding: 15px; margin-bottom: 10px; border: 1px solid #ff0000; color: #ff0000; text-shadow: 0 0 5px #f00; font-size: 1.2em; }
+        canvas { width: 100%; height: 150px; background: #000; border: 1px solid #300; margin: 10px 0; }
+        .btn { width: 48%; margin: 4px 1%; padding: 15px; background: #200; color: #ff0000; border: 2px solid #ff0000; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #ff0000; color: #000; }
+        input[type="file"] { background: #1a0000; color: #ff0000; width: 100%; padding: 15px; margin: 10px 0; border: 1px dashed #ff0000; }
+        .status { font-size: 0.8em; color: #600; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h3>LYRIA CORE ENGINE</h3>
-        <div id="display">READY: SELECT FILES</div>
-        <input type="file" id="f-in" multiple>
-        <button class="btn" onclick="play()">PLAY</button>
-        <button class="btn" onclick="pause()">PAUSE</button>
-        <button class="btn" onclick="next()">NEXT</button>
-        <button class="btn" onclick="stop()">STOP</button>
-        <hr style="border:1px solid #333; margin:15px 0;">
-        <button class="btn" onclick="stitch()">STITCH ALL</button>
-        <button class="btn" id="rec-btn" onclick="toggleRec()">REC</button>
-        <button class="btn" onclick="speed(1.5)">1.5x</button>
-        <button class="btn" onclick="speed(0.8)">0.8x</button>
+        <h2 style="letter-spacing: 5px;">LYRIA CORE: RED RAIN</h2>
+        <div id="display">SYSTEM IDLE: LOAD TECHNO</div>
+        
+        <canvas id="viz"></canvas>
+
+        <input type="file" id="f-in" multiple accept="audio/*">
+        
+        <div style="display:flex; flex-wrap: wrap;">
+            <button class="btn" onclick="play()">ENGAGE</button>
+            <button class="btn" onclick="stop()">ABORT</button>
+            <button class="btn" onclick="next()">SKIP TRACK</button>
+            <button class="btn" onclick="stitch26()">STITCH (26s OVERLAP)</button>
+        </div>
+
+        <div class="status">BCM ERROR: WIPER PULSE ACTIVE // RED_RAIN.exe</div>
     </div>
-    <audio id="aud"></audio>
+
     <script>
-        let a=document.getElementById('aud'), d=document.getElementById('display'), t=[], c=0, r, ch=[];
-        document.getElementById('f-in').onchange=(e)=>{
-            t=Array.from(e.target.files).map(f=>({b:f,u:URL.createObjectURL(f)}));
-            d.innerText=t.length+" LOADED";
+        let t=[], c=0, actx, src, ana, data, canvas, ctx;
+        const aud = new Audio();
+        canvas = document.getElementById('viz');
+        ctx = canvas.getContext('2d');
+
+        // File Loading
+        document.getElementById('f-in').onchange = (e) => {
+            t = Array.from(e.target.files).map(f => ({ b: f, u: URL.createObjectURL(f), n: f.name }));
+            document.getElementById('display').innerText = t.length + " COMMANDS LOADED";
         };
-        function play(){if(t[c]){a.src=t[c].u;a.play();d.innerText="TRACK "+(c+1);}}
-        function pause(){a.pause();d.innerText="PAUSED";}
-        function stop(){a.pause();a.currentTime=0;d.innerText="STOPPED";}
-        function next(){c=(c+1)%t.length;play();}
-        function speed(s){a.playbackRate=s;d.innerText="SPEED: "+s+"x";}
-        a.onended=()=>{next();};
-        function stitch(){
-            if(t.length<1)return;
-            let b=new Blob(t.map(i=>i.b),{type:'audio/mpeg'});
-            let l=document.createElement('a');
-            l.href=URL.createObjectURL(b);
-            l.download="lyria_manual_export.mp3";
-            l.click();
-            d.innerText="STITCHED & SAVED";
-        }
-        async function toggleRec(){
-            if(!r){
-                let s=await navigator.mediaDevices.getUserMedia({audio:true});
-                r=new MediaRecorder(s);
-                r.ondataavailable=(e)=>ch.push(e.data);
-                r.onstop=()=>{
-                    let b=new Blob(ch,{type:'audio/ogg'});
-                    let l=document.createElement('a');
-                    l.href=URL.createObjectURL(b);
-                    l.download="lyria_rec.ogg";
-                    l.click();
-                    ch=[];
-                    d.innerText="REC SAVED";
-                };
-                r.start(); d.innerText="RECORDING...";
-                document.getElementById('rec-btn').style.color="red";
-            }else{
-                r.stop(); r=null;
-                document.getElementById('rec-btn').style.color="#0f0";
+
+        // Visualizer Setup (Red Rain / Wipers)
+        function initViz() {
+            if (!actx) {
+                actx = new (window.AudioContext || window.webkitAudioContext)();
+                src = actx.createMediaElementSource(aud);
+                ana = actx.createAnalyser();
+                src.connect(ana);
+                ana.connect(actx.destination);
+                ana.fftSize = 256;
+                data = new Uint8Array(ana.frequencyBinCount);
+                draw();
             }
+        }
+
+        function draw() {
+            requestAnimationFrame(draw);
+            ana.getByteFrequencyData(data);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Tail effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // The "Red Rain" bars
+            for (let i = 0; i < data.length; i++) {
+                let h = data[i] / 2;
+                ctx.fillStyle = `rgb(${data[i] + 100}, 0, 0)`;
+                ctx.fillRect(i * 3, canvas.height - h, 2, h);
+            }
+
+            // The "Wiper" Sweep (A visual line moving across)
+            let sweep = (Date.now() % 2000) / 2000 * canvas.width;
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(sweep, 0);
+            ctx.lineTo(sweep - 20, canvas.height);
+            ctx.stroke();
+        }
+
+        function play() {
+            if (t[c]) {
+                initViz();
+                actx.resume();
+                aud.src = t[c].u;
+                aud.play();
+                document.getElementById('display').innerText = "PLAYING: " + t[c].n;
+            }
+        }
+
+        function stop() { aud.pause(); aud.currentTime = 0; document.getElementById('display').innerText = "HALTED"; }
+        function next() { c = (c + 1) % t.length; play(); }
+        aud.onended = () => { next(); };
+
+        // THE PRO STITCH: Merges files with a 26-second overlap
+        async function stitch26() {
+            if (t.length < 2) { alert("Need at least 2 tracks to overlap."); return; }
+            document.getElementById('display').innerText = "STITCHING...";
+            
+            let tempCtx = new OfflineAudioContext(2, 44100 * 300, 44100); // 5 min max
+            let offset = 0;
+
+            for (let i = 0; i < t.length; i++) {
+                let res = await fetch(t[i].u);
+                let buf = await tempCtx.decodeAudioData(await res.arrayBuffer());
+                let source = tempCtx.createBufferSource();
+                source.buffer = buf;
+                source.connect(tempCtx.destination);
+                source.start(offset);
+                
+                // Set the next track to start 26 seconds after this one began
+                if (i < t.length - 1) offset += 26; 
+            }
+
+            let rendered = await tempCtx.startRendering();
+            saveBuffer(rendered);
+        }
+
+        function saveBuffer(buffer) {
+            let wav = audioBufferToWav(buffer);
+            let blob = new Blob([wav], { type: 'audio/wav' });
+            let l = document.createElement('a');
+            l.href = URL.createObjectURL(blob);
+            l.download = "X200_Possessed_Final.wav";
+            l.click();
+            document.getElementById('display').innerText = "EXPORT COMPLETE";
+        }
+
+        // Helper to convert internal buffer to a file
+        function audioBufferToWav(buffer) {
+            let numOfChan = buffer.numberOfChannels,
+                length = buffer.length * numOfChan * 2 + 44,
+                out = new ArrayBuffer(length),
+                view = new DataView(out),
+                channels = [], i, sample, offset = 0, pos = 0;
+
+            function setUint32(d) { view.setUint32(pos, d, true); pos += 4; }
+            function setUint16(d) { view.setUint16(pos, d, true); pos += 2; }
+
+            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+            setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+
+            for (i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
+            while (pos < length) {
+                for (i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            return out;
         }
     </script>
 </body>
