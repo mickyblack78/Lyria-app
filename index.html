@@ -3,51 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X200 V4.7: LIFTED DASHBOARD</title>
+    <title>X200 V4.8: VIDEO WINDSHIELD</title>
     <style>
-        :root { --accent: #ff3333; --bg: #000; --panel: #111; }
+        :root { --accent: #ff3333; --bg: #000; }
         body { background: var(--bg); color: var(--accent); font-family: monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #header { height: 35px; background: #0a0000; border-bottom: 1px solid #300; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; z-index: 100; }
+        /* FIXED HEADER WITH VIDEO WINDSHIELD */
+        #header { height: 160px; background: #0a0000; border-bottom: 2px solid #300; display: flex; flex-direction: column; align-items: center; z-index: 100; position: relative; }
+        #windshield { height: 120px; width: 200px; background: #111; border: 1px solid #444; margin-top: 5px; object-fit: cover; }
+        #status { font-size: 10px; margin-top: 5px; color: #fff; }
 
-        #studio-main { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; background: #050000; touch-action: none; }
-        .lane { height: 90px; position: relative; width: 6000px; border-bottom: 1px solid #222; }
-        #gutter { height: 50px; width: 6000px; background: #080000; position: relative; border-top: 1px solid #444; border-bottom: 1px solid #444; }
+        /* SCROLLABLE STUDIO MIDDLE */
+        #studio-main { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; background: #050000; touch-action: pan-x; scroll-behavior: smooth; }
+        .lane { height: 110px; position: relative; width: 8000px; border-bottom: 1px solid #222; background-image: linear-gradient(90deg, #111 1px, transparent 1px); background-size: 40px 100%; }
+        #gutter { height: 50px; width: 8000px; background: #080000; position: relative; border-top: 1px solid #444; border-bottom: 1px solid #444; }
         
         #playhead { position: absolute; top: 0; width: 2px; background: #fff; height: 100%; z-index: 90; pointer-events: none; }
-        #needle-handle { position: absolute; top: 90px; width: 50px; height: 50px; background: rgba(255,255,255,0.15); border-left: 2px solid #fff; margin-left: -25px; z-index: 95; }
+        #needle-handle { position: absolute; top: 110px; width: 60px; height: 50px; background: rgba(255,255,255,0.2); border-left: 2px solid #fff; margin-left: -30px; z-index: 95; }
 
-        .clip { position: absolute; height: 80px; top: 5px; background: rgba(255,0,0,0.2); border: 1px solid var(--accent); z-index: 10; overflow: hidden; }
-        canvas { width: 100%; height: 100%; }
+        .clip { position: absolute; height: 100px; top: 5px; background: rgba(255,0,0,0.2); border: 1px solid var(--accent); z-index: 10; overflow: hidden; border-radius: 4px; }
+        canvas { width: 100%; height: 100%; pointer-events: none; }
 
-        /* THE LIFTED FOOTER */
-        #footer { 
-            height: 110px; 
-            background: #000; 
-            border-top: 2px solid var(--accent); 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            grid-template-rows: repeat(2, 1fr); 
-            gap: 4px; 
-            padding: 6px; 
-            padding-bottom: 70px; /* THIS LIFTS THE BUTTONS ABOVE YOUR ANDROID BAR */
-            z-index: 100; 
-        }
-        .btn { background: #1a0000; color: var(--accent); border: 1px solid #444; font-weight: bold; font-size: 8px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; }
+        /* FIXED 10-BUTTON DASHBOARD WITH LIFT */
+        #footer { height: 100px; background: #000; border-top: 2px solid var(--accent); display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4px; padding: 8px 8px 75px 8px; z-index: 100; }
+        .btn { background: #1a0000; color: var(--accent); border: 1px solid #444; font-weight: bold; font-size: 9px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; }
         .btn:active { background: var(--accent); color: #000; }
-        .active-lock { background: var(--accent); color: #000; }
+        .active-lock { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
 
-        #lib-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; padding: 10px; box-sizing: border-box; }
-        .lib-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; overflow-y: auto; padding-bottom: 80px; }
-        .slot { background: #111; border: 1px solid #333; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 8px; text-align: center; color: #aaa; overflow: hidden; }
+        /* LIBRARY OVERLAY */
+        #lib-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 2000; display: none; flex-direction: column; padding: 15px; box-sizing: border-box; }
+        .lib-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex: 1; overflow-y: auto; padding-bottom: 100px; }
+        .slot { background: #111; border: 1px solid #333; height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 8px; color: #888; overflow: hidden; }
         .slot.selected { border-color: #0f0; color: #0f0; background: #051a05; }
-        #inject-controls { height: 70px; display: flex; gap: 10px; border-top: 1px solid #333; padding-top: 10px; margin-bottom: 50px; }
-        .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; font-size: 11px; }
+        #inject-controls { height: 80px; display: flex; gap: 10px; border-top: 1px solid #333; padding-top: 10px; margin-bottom: 60px; }
+        .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="header">X200 V4.7 // NAV-BAR BYPASS</div>
+<div id="header">
+    <video id="windshield" muted playsinline></video>
+    <div id="status">X200 V4.8 // READY</div>
+</div>
 
 <div id="studio-main">
     <div id="playhead"><div id="needle-handle" ontouchmove="grabNeedle(event)"></div></div>
@@ -70,30 +67,31 @@
 </div>
 
 <div id="lib-overlay">
-    <div style="text-align:center; padding: 10px; font-weight:bold;">SELECT TRACK TO INJECT</div>
+    <div style="text-align:center; padding: 10px; font-weight:bold; color:#fff;">INJECT TO TIMELINE</div>
     <div class="lib-grid" id="lib-grid-view"></div>
     <div id="inject-controls">
         <button class="inject-btn" onclick="injectTo(1)">LANE 1</button>
         <button class="inject-btn" onclick="injectTo(2)">LANE 2</button>
-        <button class="inject-btn" onclick="closeLib()" style="background:#222;">BACK</button>
+        <button class="inject-btn" onclick="closeLib()" style="background:#222;">EXIT</button>
     </div>
 </div>
 
-<input type="file" id="f-upload" hidden onchange="handleUpload(event)">
+<input type="file" id="f-upload" hidden accept="video/*,audio/*" onchange="handleUpload(event)">
 
 <script>
     const actx = new (window.AudioContext || window.webkitAudioContext)();
     const pxPerSec = 40;
+    const win = document.getElementById('windshield');
     let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, mergeCount: 0, locked: false, selectedSlot: null };
     let garage = new Array(10).fill(null);
     let merged = new Array(10).fill(null);
 
     async function handleUpload(e) {
         const file = e.target.files[0]; if (!file) return;
-        const buffer = await actx.decodeAudioData(await file.arrayBuffer());
-        let emptyIdx = garage.findIndex(x => x === null);
-        if (emptyIdx === -1) emptyIdx = 0;
-        garage[emptyIdx] = { name: file.name, buffer };
+        const url = URL.createObjectURL(file);
+        const buffer = await actx.decodeAudioData(await (await fetch(url)).arrayBuffer());
+        let idx = garage.findIndex(x => x === null); if (idx === -1) idx = 0;
+        garage[idx] = { name: file.name, buffer, url };
         openLib();
     }
 
@@ -101,11 +99,8 @@
         const grid = document.getElementById('lib-grid-view'); grid.innerHTML = '';
         [...garage, ...merged].forEach((t, i) => {
             const d = document.createElement('div'); d.className = 'slot';
-            d.innerText = t ? (i < 10 ? `G-${i+1}\n${t.name.substring(0,8)}` : `S-${i+1}\nMERGED`) : (i < 10 ? `G-${i+1}\nEMPTY` : `S-${i+1}\nEMPTY`);
-            if (t) d.onclick = () => {
-                document.querySelectorAll('.slot').forEach(s => s.className = 'slot');
-                d.className = 'slot selected'; state.selectedSlot = t;
-            };
+            d.innerText = t ? (i < 10 ? `G-${i+1}\n${t.name.slice(0,10)}` : `S-${i-9}\nMERGED`) : `EMPTY`;
+            if (t) d.onclick = () => { document.querySelectorAll('.slot').forEach(s => s.className='slot'); d.className='slot selected'; state.selectedSlot=t; };
             grid.appendChild(d);
         });
         document.getElementById('lib-overlay').style.display = 'flex';
@@ -115,94 +110,51 @@
 
     function injectTo(lane) {
         if (!state.selectedSlot) return;
-        const clip = { buffer: state.selectedSlot.buffer, offset: (lane === 2 ? 5 : 0) };
-        if (lane === 1) state.bar1 = clip; else state.bar2 = clip;
+        const clip = { buffer: state.selectedSlot.buffer, url: state.selectedSlot.url, offset: (lane === 2 ? 5 : 0) };
+        if (lane === 1) { state.bar1 = clip; win.src = clip.url; } else { state.bar2 = clip; }
         render(lane, clip); closeLib();
     }
 
     function render(lane, clip) {
         const lEl = document.getElementById(`lane${lane}`); lEl.innerHTML = '';
         const div = document.createElement('div'); div.className = 'clip';
-        div.style.width = (clip.buffer.duration * pxPerSec) + "px";
-        div.style.left = (clip.offset * pxPerSec) + "px";
-        const canv = document.createElement('canvas'); drawWaveform(clip.buffer, canv); div.appendChild(canv);
+        div.style.width = (clip.buffer.duration * pxPerSec) + "px"; div.style.left = (clip.offset * pxPerSec) + "px";
+        const canv = document.createElement('canvas'); drawWave(clip.buffer, canv); div.appendChild(canv);
         let startX = 0;
         div.ontouchstart = (e) => { startX = e.touches[0].clientX - div.offsetLeft; };
-        div.ontouchmove = (e) => {
-            let x = e.touches[0].clientX - startX;
-            clip.offset = Math.max(0, x / pxPerSec); div.style.left = x + "px";
-        };
+        div.ontouchmove = (e) => { let x = e.touches[0].clientX - startX; clip.offset = Math.max(0, x / pxPerSec); div.style.left = x + "px"; };
         lEl.appendChild(div);
     }
 
-    function drawWaveform(buffer, canvas) {
+    function drawWave(buffer, canvas) {
         const ctx = canvas.getContext('2d'); const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
-        canvas.width = buffer.duration * pxPerSec; canvas.height = 80;
+        canvas.width = buffer.duration * pxPerSec; canvas.height = 100;
         ctx.fillStyle = '#ff3333';
-        for(let i=0; i < canvas.width; i++) {
-            let min=1.0, max=-1.0;
-            for(let j=0; j<step; j++) {
-                let v = data[(i*step)+j];
-                if(v<min) min=v; if(v>max) max=v;
-            }
-            ctx.fillRect(i, (1+min)*40, 1, Math.max(1, (max-min)*40));
+        for(let i=0; i<canvas.width; i++) {
+            let min=1, max=-1; for(let j=0; j<step; j++) { let v=data[(i*step)+j]; if(v<min)min=v; if(v>max)max=v; }
+            ctx.fillRect(i, (1+min)*50, 1, Math.max(1, (max-min)*50));
         }
     }
 
     function grabNeedle(e) {
-        e.preventDefault();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) + document.getElementById('studio-main').scrollLeft;
-        state.currentTime = x / pxPerSec;
+        e.preventDefault(); const x = (e.touches[0].clientX) + document.getElementById('studio-main').scrollLeft;
+        state.currentTime = x / pxPerSec; win.currentTime = state.currentTime;
         document.getElementById('playhead').style.left = x + "px";
-        if (state.playing) { stop(); togglePlay(); }
-    }
-
-    function toggleLock() {
-        state.locked = !state.locked;
-        document.getElementById('lock-btn').className = state.locked ? 'btn active-lock' : 'btn';
-    }
-
-    async function slamMerge() {
-        if (!state.bar1 || !state.bar2) return;
-        const totalDur = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
-        const offCtx = new OfflineAudioContext(2, 44100 * totalDur, 44100);
-        const s1 = offCtx.createBufferSource(); s1.buffer = state.bar1.buffer;
-        const g1 = offCtx.createGain(); s1.connect(g1); g1.connect(offCtx.destination);
-        s1.start(0);
-        if(state.locked) {
-            let fadeTime = Math.min(1.5, state.bar1.buffer.duration - state.bar2.offset);
-            if(fadeTime > 0) { g1.gain.setValueAtTime(1, state.bar2.offset); g1.gain.linearRampToValueAtTime(0, state.bar2.offset + fadeTime); }
-        }
-        const s2 = offCtx.createBufferSource(); s2.buffer = state.bar2.buffer;
-        s2.connect(offCtx.destination); s2.start(state.bar2.offset);
-        const res = await offCtx.startRendering();
-        state.bar1 = { buffer: res, offset: 0 }; state.bar2 = null;
-        const idx = state.mergeCount % 10; merged[idx] = { name: "MERGE", buffer: res }; state.mergeCount++;
-        render(1, state.bar1); document.getElementById('lane2').innerHTML = '';
-    }
-
-    function resetDeck() {
-        state.bar1 = null; state.bar2 = null; state.currentTime = 0;
-        document.getElementById('lane1').innerHTML = '';
-        document.getElementById('lane2').innerHTML = '';
-        document.getElementById('playhead').style.left = "0px";
     }
 
     function togglePlay() {
-        if (state.playing) { stop(); }
-        state.playing = true; state.startTime = actx.currentTime;
+        if (state.playing) stop();
+        state.playing = true; state.startTime = actx.currentTime; win.currentTime = state.currentTime; win.play();
         [state.bar1, state.bar2].forEach(b => { if (b) {
             b.source = actx.createBufferSource(); b.source.buffer = b.buffer; b.source.connect(actx.destination);
-            let d = b.offset - state.currentTime;
-            d < 0 ? b.source.start(0, Math.abs(d)) : b.source.start(actx.currentTime + d);
+            let d = b.offset - state.currentTime; d < 0 ? b.source.start(0, Math.abs(d)) : b.source.start(actx.currentTime + d);
         }});
-        document.getElementById('play-btn').innerText = "LIVE";
-        requestAnimationFrame(sync);
+        document.getElementById('play-btn').innerText = "LIVE"; requestAnimationFrame(sync);
     }
 
     function stop() {
-        state.playing = false; state.currentTime += (actx.currentTime - state.startTime);
+        state.playing = false; state.currentTime += (actx.currentTime - state.startTime); win.pause();
         [state.bar1, state.bar2].forEach(b => { if (b?.source) b.source.stop(); });
         document.getElementById('play-btn').innerText = "PLAY";
     }
@@ -210,35 +162,43 @@
     function sync() {
         if (!state.playing) return;
         let now = (actx.currentTime - state.startTime) + state.currentTime;
-        document.getElementById('playhead').style.left = (now * pxPerSec) + "px";
+        let x = now * pxPerSec; document.getElementById('playhead').style.left = x + "px";
+        document.getElementById('studio-main').scrollLeft = x - (window.innerWidth / 2);
         requestAnimationFrame(sync);
     }
 
-    function undoLast() {
-        if (state.mergeCount > 0) {
-            state.mergeCount--; merged[state.mergeCount % 10] = null;
-            resetDeck();
-        }
+    function toggleLock() { state.locked = !state.locked; document.getElementById('lock-btn').classList.toggle('active-lock'); }
+
+    async function slamMerge() {
+        if (!state.bar1 || !state.bar2) return;
+        const dur = Math.max(state.bar1.buffer.duration, state.bar2.buffer.duration + state.bar2.offset);
+        const octx = new OfflineAudioContext(2, 44100 * dur, 44100);
+        const s1 = octx.createBufferSource(); s1.buffer = state.bar1.buffer; const g1 = octx.createGain();
+        s1.connect(g1); g1.connect(octx.destination); s1.start(0);
+        if(state.locked) { let f = Math.min(1.5, state.bar1.buffer.duration - state.bar2.offset); if(f>0) { g1.gain.setValueAtTime(1, state.bar2.offset); g1.gain.linearRampToValueAtTime(0, state.bar2.offset + f); } }
+        const s2 = octx.createBufferSource(); s2.buffer = state.bar2.buffer; s2.connect(octx.destination); s2.start(state.bar2.offset);
+        const res = await octx.startRendering();
+        const url = state.bar1.url; state.bar1 = { buffer: res, offset: 0, url }; state.bar2 = null;
+        merged[state.mergeCount % 10] = { name: "SLAM", buffer: res, url }; state.mergeCount++;
+        render(1, state.bar1); document.getElementById('lane2').innerHTML = '';
     }
+
+    function resetDeck() { state.bar1 = null; state.bar2 = null; state.currentTime = 0; document.getElementById('lane1').innerHTML = ''; document.getElementById('lane2').innerHTML = ''; document.getElementById('playhead').style.left = "0px"; win.src = ""; }
+
+    function undoLast() { if (state.mergeCount > 0) { state.mergeCount--; resetDeck(); } }
 
     function exportFinal() {
-        if (!state.bar1) return;
-        const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "X200_FINAL.wav"; a.click();
+        if (!state.bar1) return; const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "X200_FINAL.wav"; a.click();
     }
 
-    function bufferToWav(abuffer) {
-        let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44, buf = new ArrayBuffer(len), view = new DataView(buf), pos = 0;
-        const set16 = (d) => { view.setInt16(pos, d, true); pos += 2; };
-        const set32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
-        set32(0x46464952); set32(len - 8); set32(0x45564157); set32(0x20746d66); set32(16); set16(1); set16(n); set32(abuffer.sampleRate); set32(abuffer.sampleRate * n * 2); set16(n * 2); set16(16); set32(0x61746164); set32(len - pos - 4);
-        for (let i = 0; i < abuffer.length; i++) { for (let j = 0; j < n; j++) {
-            let s = Math.max(-1, Math.min(1, abuffer.getChannelData(j)[i]));
-            set16(s < 0 ? s * 0x8000 : s * 0x7FFF);
-        }}
-        return buf;
+    function bufferToWav(ab) {
+        let n = ab.numberOfChannels, len = ab.length * n * 2 + 44, b = new ArrayBuffer(len), v = new DataView(b), p = 0;
+        const s16 = (d) => { v.setInt16(p, d, true); p += 2; }; const s32 = (d) => { v.setUint32(p, d, true); p += 4; };
+        s32(0x46464952); s32(len-8); s32(0x45564157); s32(0x20746d66); s32(16); s16(1); s16(n); s32(ab.sampleRate); s32(ab.sampleRate*n*2); s16(n*2); s16(16); s32(0x61746164); s32(len-p-4);
+        for (let i=0; i<ab.length; i++) for (let j=0; j<n; j++) { let s = Math.max(-1, Math.min(1, ab.getChannelData(j)[i])); s16(s < 0 ? s*0x8000 : s*0x7FFF); }
+        return b;
     }
 </script>
 </body>
-    </html>
+</html>
