@@ -3,43 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X200 V4.6: STUDIO DASHBOARD</title>
+    <title>X200 V4.7: LIFTED DASHBOARD</title>
     <style>
         :root { --accent: #ff3333; --bg: #000; --panel: #111; }
         body { background: var(--bg); color: var(--accent); font-family: monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* HEADER STICKY */
-        #header { height: 40px; background: #0a0000; border-bottom: 1px solid #300; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; z-index: 100; }
+        #header { height: 35px; background: #0a0000; border-bottom: 1px solid #300; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; z-index: 100; }
 
-        /* CENTER SCROLLABLE */
         #studio-main { flex: 1; overflow-x: auto; overflow-y: hidden; position: relative; background: #050000; touch-action: none; }
-        .lane { height: 100px; position: relative; width: 6000px; border-bottom: 1px solid #222; }
-        #gutter { height: 60px; width: 6000px; background: #080000; position: relative; border-top: 1px solid #444; border-bottom: 1px solid #444; }
+        .lane { height: 90px; position: relative; width: 6000px; border-bottom: 1px solid #222; }
+        #gutter { height: 50px; width: 6000px; background: #080000; position: relative; border-top: 1px solid #444; border-bottom: 1px solid #444; }
         
         #playhead { position: absolute; top: 0; width: 2px; background: #fff; height: 100%; z-index: 90; pointer-events: none; }
-        #needle-handle { position: absolute; top: 100px; width: 50px; height: 60px; background: rgba(255,255,255,0.15); border-left: 2px solid #fff; margin-left: -25px; z-index: 95; }
+        #needle-handle { position: absolute; top: 90px; width: 50px; height: 50px; background: rgba(255,255,255,0.15); border-left: 2px solid #fff; margin-left: -25px; z-index: 95; }
 
-        .clip { position: absolute; height: 90px; top: 5px; background: rgba(255,0,0,0.2); border: 1px solid var(--accent); z-index: 10; overflow: hidden; }
+        .clip { position: absolute; height: 80px; top: 5px; background: rgba(255,0,0,0.2); border: 1px solid var(--accent); z-index: 10; overflow: hidden; }
         canvas { width: 100%; height: 100%; }
 
-        /* FOOTER 10-BUTTON GRID */
-        #footer { height: 120px; background: #000; border-top: 2px solid var(--accent); display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4px; padding: 6px; z-index: 100; }
-        .btn { background: #1a0000; color: var(--accent); border: 1px solid #444; font-weight: bold; font-size: 9px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; }
+        /* THE LIFTED FOOTER */
+        #footer { 
+            height: 110px; 
+            background: #000; 
+            border-top: 2px solid var(--accent); 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            grid-template-rows: repeat(2, 1fr); 
+            gap: 4px; 
+            padding: 6px; 
+            padding-bottom: 70px; /* THIS LIFTS THE BUTTONS ABOVE YOUR ANDROID BAR */
+            z-index: 100; 
+        }
+        .btn { background: #1a0000; color: var(--accent); border: 1px solid #444; font-weight: bold; font-size: 8px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; }
         .btn:active { background: var(--accent); color: #000; }
-        .active-lock { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+        .active-lock { background: var(--accent); color: #000; }
 
-        /* FULL SCREEN LIBRARY OVERLAY */
         #lib-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; padding: 10px; box-sizing: border-box; }
         .lib-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; overflow-y: auto; padding-bottom: 80px; }
-        .slot { background: #111; border: 1px solid #333; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 8px; text-align: center; color: #aaa; overflow: hidden; }
+        .slot { background: #111; border: 1px solid #333; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 8px; text-align: center; color: #aaa; overflow: hidden; }
         .slot.selected { border-color: #0f0; color: #0f0; background: #051a05; }
-        #inject-controls { height: 70px; display: flex; gap: 10px; border-top: 1px solid #333; padding-top: 10px; }
-        .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; font-size: 12px; }
+        #inject-controls { height: 70px; display: flex; gap: 10px; border-top: 1px solid #333; padding-top: 10px; margin-bottom: 50px; }
+        .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; font-size: 11px; }
     </style>
 </head>
 <body>
 
-<div id="header">X200 V4.6 // ENGINE STABLE</div>
+<div id="header">X200 V4.7 // NAV-BAR BYPASS</div>
 
 <div id="studio-main">
     <div id="playhead"><div id="needle-handle" ontouchmove="grabNeedle(event)"></div></div>
@@ -56,7 +64,7 @@
     <button class="btn" onclick="togglePlay()" id="play-btn">PLAY</button>
     <button class="btn" onclick="stop()">PAUSE</button>
     <button class="btn" onclick="resetDeck()">RESET</button>
-    <button class="btn" style="color:#888">RECORD</button>
+    <button class="btn" style="color:#555">RECORD</button>
     <button class="btn" onclick="undoLast()">UNDO</button>
     <button class="btn" onclick="exportFinal()">EXPORT</button>
 </div>
@@ -65,9 +73,9 @@
     <div style="text-align:center; padding: 10px; font-weight:bold;">SELECT TRACK TO INJECT</div>
     <div class="lib-grid" id="lib-grid-view"></div>
     <div id="inject-controls">
-        <button class="inject-btn" onclick="injectTo(1)">SEND TO LANE 1</button>
-        <button class="inject-btn" onclick="injectTo(2)">SEND TO LANE 2</button>
-        <button class="inject-btn" onclick="closeLib()" style="background:#222; border-color:#555">CANCEL</button>
+        <button class="inject-btn" onclick="injectTo(1)">LANE 1</button>
+        <button class="inject-btn" onclick="injectTo(2)">LANE 2</button>
+        <button class="inject-btn" onclick="closeLib()" style="background:#222;">BACK</button>
     </div>
 </div>
 
@@ -84,7 +92,7 @@
         const file = e.target.files[0]; if (!file) return;
         const buffer = await actx.decodeAudioData(await file.arrayBuffer());
         let emptyIdx = garage.findIndex(x => x === null);
-        if (emptyIdx === -1) emptyIdx = 0; // Overwrite 1 if full
+        if (emptyIdx === -1) emptyIdx = 0;
         garage[emptyIdx] = { name: file.name, buffer };
         openLib();
     }
@@ -130,7 +138,7 @@
     function drawWaveform(buffer, canvas) {
         const ctx = canvas.getContext('2d'); const data = buffer.getChannelData(0);
         const step = Math.ceil(data.length / (buffer.duration * pxPerSec));
-        canvas.width = buffer.duration * pxPerSec; canvas.height = 90;
+        canvas.width = buffer.duration * pxPerSec; canvas.height = 80;
         ctx.fillStyle = '#ff3333';
         for(let i=0; i < canvas.width; i++) {
             let min=1.0, max=-1.0;
@@ -138,7 +146,7 @@
                 let v = data[(i*step)+j];
                 if(v<min) min=v; if(v>max) max=v;
             }
-            ctx.fillRect(i, (1+min)*45, 1, Math.max(1, (max-min)*45));
+            ctx.fillRect(i, (1+min)*40, 1, Math.max(1, (max-min)*40));
         }
     }
 
@@ -189,7 +197,7 @@
             let d = b.offset - state.currentTime;
             d < 0 ? b.source.start(0, Math.abs(d)) : b.source.start(actx.currentTime + d);
         }});
-        document.getElementById('play-btn').innerText = "PLAYING";
+        document.getElementById('play-btn').innerText = "LIVE";
         requestAnimationFrame(sync);
     }
 
@@ -217,7 +225,7 @@
         if (!state.bar1) return;
         const blob = new Blob([bufferToWav(state.bar1.buffer)], {type:'audio/wav'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = "X200_EXPORT.wav"; a.click();
+        a.download = "X200_FINAL.wav"; a.click();
     }
 
     function bufferToWav(abuffer) {
@@ -233,4 +241,4 @@
     }
 </script>
 </body>
-</html>
+    </html>
