@@ -109,7 +109,81 @@ const slamWorkletCode = `
   }
   registerProcessor('slam-processor', SlamProcessor);
 `;
+<script>
+    // CLEANED CORE INITIALIZATION
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    const pxPerSec = 40;
+    let spectralNode;
+    
+    let state = { 
+        playing: false, 
+        currentTime: 0, 
+        startTime: 0, 
+        bar1: null, 
+        bar2: null, 
+        locked: false, 
+        selected: null, 
+        focus: 'video' 
+    };
+    
+    let garage = new Array(10).fill(null); 
+    let merged = new Array(10).fill(null);
 
+    // WORKLET INITIALIZATION (Call this on first LIB click or PLAY)
+    async function bootSlam() {
+        if (actx.state === 'suspended') await actx.resume();
+        if (!spectralNode) {
+            const slamBlob = new Blob([slamWorkletCode], { type: 'application/javascript' });
+            const slamUrl = URL.createObjectURL(slamBlob);
+            await actx.audioWorklet.addModule(slamUrl);
+            spectralNode = new AudioWorkletNode(actx, 'slam-processor', {
+                numberOfInputs: 2,
+                numberOfOutputs: 1
+            });
+            spectralNode.connect(actx.destination);
+        }
+    }
+
+    // RE-SYNC LOGIC (FIXES DRIFT)
+    function sync() {
+        if(!state.playing) return;
+        let now = (actx.currentTime - state.startTime);
+        let displayTime = state.currentTime + now;
+        let xPos = displayTime * pxPerSec;
+        
+        const playhead = document.getElementById('playhead');
+        const studio = document.getElementById('studio-main');
+        
+        playhead.style.left = xPos + "px";
+        
+        // Auto-scroll tracking
+        if(xPos > (studio.scrollLeft + window.innerWidth * 0.8)) {
+            studio.scrollLeft = xPos - (window.innerWidth * 0.2);
+        }
+
+        if(state.bar1 && displayTime >= state.bar1.buffer.duration + state.bar1.offset) {
+            stop();
+        } else {
+            requestAnimationFrame(sync);
+        }
+    }
+
+    // ENHANCED STOP (CLEAN DISCONNECT)
+    function stop() { 
+        if(!state.playing) return;
+        state.playing = false;
+        state.currentTime += (actx.currentTime - state.startTime);
+        
+        document.getElementById('windshield').pause();
+        document.getElementById('p-btn').innerText = "PLAY";
+        
+        [state.bar1, state.bar2].forEach(b => {
+            if(b && b.src) {
+                try { b.src.stop(); b.src.disconnect(); } catch(e) {}
+            }
+        });
+    }
+</script>
 const slamBlob = new Blob([slamWorkletCode], { type: 'application/javascript' });
 const slamUrl = URL.createObjectURL(slamBlob);
 
