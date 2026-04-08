@@ -35,6 +35,21 @@
         .slot.selected { border-color: #0f0; color: #0f0; background: #051a05; }
         #inject-controls { height: 80px; display: flex; gap: 10px; padding-top: 10px; margin-bottom: 60px; }
         .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; }
+        .slot { 
+          background: #111; 
+          border: 1px solid #333; 
+          height: 80px; /* Increased for better visibility */
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          v.overflow: hidden; 
+          position: relative;
+        }
+         .slot img {
+         width: 100%;
+         height: 100%;
+         object-fit: cover; /* Ensures the pic fills the box without stretching */
+               }
     </style>
         </head>
         <body onclick="actx.state === 'suspended' && actx.resume()">
