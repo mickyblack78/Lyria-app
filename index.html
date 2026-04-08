@@ -75,14 +75,82 @@
 <input type="file" id="f-up" hidden accept="audio/*,video/*" onchange="handleUpload(event)">
 
 <script>
+    // 1. INLINE THE WORKLET (Bypasses external file requirements)
+const slamWorkletCode = `
+  class SlamProcessor extends AudioWorkletProcessor {
+    process(inputs, outputs) {
+      const main = inputs[0][0]; 
+      const side = inputs[1][0];
+      const out = outputs[0][0];
+      if (!main || !side || !out) return true;
+      for (let i = 0; i < out.length; i++) {
+        // Spectral Carving Logic
+        const mask = Math.abs(side[i] || 0) * 1.5; 
+        out[i] = main[i] > 0 ? Math.max(0, main[i] - mask) : Math.min(0, main[i] + mask);
+        out[i] += (side[i] || 0);
+      }
+      return true;
+    }
+  }
+  registerProcessor('slam-processor', SlamProcessor);
+`;
+
+const slamBlob = new Blob([slamWorkletCode], { type: 'application/javascript' });
+const slamUrl = URL.createObjectURL(slamBlob);
+
+// 2. CORE SYSTEM LOGIC
+let spectralNode;
+const actx = new (window.AudioContext || window.webkitAudioContext)();
+
+async function initAudio() {
+    if (actx.state === 'suspended') await actx.resume();
+    await actx.audioWorklet.addModule(slamUrl);
+    spectralNode = new AudioWorkletNode(actx, 'slam-processor', {
+        numberOfInputs: 2,
+        numberOfOutputs: 1
+    });
+    spectralNode.connect(actx.destination);
+}
+
+// 3. THE LICENSE-FREE WAV ENCODER
+function exportWav() {
+    if(!state.bar1) return;
+    const blob = bufferToWav(state.bar1.buffer);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = "X200_SLAM_EXPORT.wav";
+    anchor.click();
+    URL.revokeObjectURL(url);
+}
+
+function bufferToWav(abuffer) {
+    let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44;
+    let buffer = new ArrayBuffer(len), view = new DataView(buffer), pos = 0;
+    const setU16 = (d) => { view.setUint16(pos, d, true); pos += 2; };
+    const setU32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
+
+    setU32(0x46464952); setU32(len - 8); setU32(0x45564157); // RIFF/WAVE
+    setU32(0x20746d66); setU32(16); setU16(1); setU16(n); // fmt
+    setU32(abuffer.sampleRate); setU32(abuffer.sampleRate * 2 * n);
+    setU16(n * 2); setU16(16); setU32(0x61746164); setU32(len - pos - 4); // data
+
+    for(let i=0; i<abuffer.length; i++) {
+        for(let c=0; c<n; c++) {
+            let s = Math.max(-1, Math.min(1, abuffer.getChannelData(c)[i]));
+            view.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true); pos += 2;
+        }
+    }
+    return new Blob([buffer], {type: "audio/wav"});
+}
     const actx = new (window.AudioContext || window.webkitAudioContext)();
     const pxPerSec = 40;
     let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, locked: false, selected: null, focus: 'video' };
     let garage = new Array(10).fill(null); let merged = new Array(10).fill(null);
 
     const slamWorkletCode = `
-  class SlamProcessor extends AudioWorkletProcessor {
-    process(inputs, outputs) {
+      class SlamProcessor extends AudioWorkletProcessor {
+      process(inputs, outputs) {
       const main = inputs[0][0]; 
       const side = inputs[1][0];
       const out = outputs[0][0];
@@ -223,6 +291,49 @@ const slamUrl = URL.createObjectURL(slamBlob);
 
     function reset() { state.bar1 = state.bar2 = null; state.currentTime = 0; document.getElementById('lane1').innerHTML = document.getElementById('lane2').innerHTML = ''; document.getElementById('playhead').style.left = '0px'; document.getElementById('windshield').src = ''; }
     function closeLib() { document.getElementById('lib-overlay').style.display = 'none'; state.selected = null; }
+    async function exportWav() {
+    // Check if there is audio in Lane 1 to save
+    if(!state.bar1 || !state.bar1.buffer) {
+        alert("X200: NO DATA IN LANE 1");
+        return;
+    }
+
+    const audioBuffer = state.bar1.buffer;
+    const wavBlob = bufferToWav(audioBuffer);
+    const url = URL.createObjectURL(wavBlob);
+    
+    // Create a hidden link to trigger the Android download
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `X200_EXPORT_${Date.now()}.wav`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    
+    // Cleanup memory
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+}
+
+// Manual WAV encoder (Header + PCM Data)
+function bufferToWav(abuffer) {
+    let n = abuffer.numberOfChannels, len = abuffer.length * n * 2 + 44;
+    let buffer = new ArrayBuffer(len), view = new DataView(buffer), pos = 0;
+    const setU16 = (d) => { view.setUint16(pos, d, true); pos += 2; };
+    const setU32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
+
+    setU32(0x46464952); setU32(len - 8); setU32(0x45564157); // RIFF/WAVE
+    setU32(0x20746d66); setU32(16); setU16(1); setU16(n); // fmt
+    setU32(abuffer.sampleRate); setU32(abuffer.sampleRate * 2 * n);
+    setU16(n * 2); setU16(16); setU32(0x61746164); setU32(len - pos - 4); // data
+
+    for(let i=0; i<abuffer.length; i++) {
+        for(let c=0; c<n; c++) {
+            let s = Math.max(-1, Math.min(1, abuffer.getChannelData(c)[i]));
+            view.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true); pos += 2;
+        }
+    }
+    return new Blob([buffer], {type: "audio/wav"});
+}
 </script>
 </body>
 </html>
