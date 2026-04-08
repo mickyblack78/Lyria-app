@@ -36,11 +36,11 @@
         #inject-controls { height: 80px; display: flex; gap: 10px; padding-top: 10px; margin-bottom: 60px; }
         .inject-btn { flex: 1; background: #300; color: #fff; border: 1px solid var(--accent); font-weight: bold; }
     </style>
-</head>
-<body onclick="actx.state === 'suspended' && actx.resume()">
+        </head>
+        <body onclick="actx.state === 'suspended' && actx.resume()">
 
-<div id="header" onclick="setFocus('video')">
-    <video id="windshield" playsinline></video>
+        <div id="header" onclick="setFocus('video')">
+        <video id="windshield" playsinline></video>
 </div>
 
 <div id="studio-main">
@@ -80,6 +80,29 @@
     let state = { playing: false, currentTime: 0, startTime: 0, bar1: null, bar2: null, locked: false, selected: null, focus: 'video' };
     let garage = new Array(10).fill(null); let merged = new Array(10).fill(null);
 
+    const slamWorkletCode = `
+  class SlamProcessor extends AudioWorkletProcessor {
+    process(inputs, outputs) {
+      const main = inputs[0][0]; 
+      const side = inputs[1][0];
+      const out = outputs[0][0];
+      if (!main || !side || !out) return true;
+
+      for (let i = 0; i < out.length; i++) {
+        // High-speed spectral-style carving logic
+        const mask = Math.abs(side[i]) * 1.5; 
+        out[i] = main[i] > 0 ? Math.max(0, main[i] - mask) : Math.min(0, main[i] + mask);
+        out[i] += side[i];
+      }
+      return true;
+    }
+  }
+  registerProcessor('slam-processor', SlamProcessor);
+`;
+
+const slamBlob = new Blob([slamWorkletCode], { type: 'application/javascript' });
+const slamUrl = URL.createObjectURL(slamBlob);
+    
     function setFocus(target) {
         state.focus = target;
         document.getElementById('header').className = target === 'video' ? '' : 'shrunk';
